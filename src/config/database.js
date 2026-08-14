@@ -1,131 +1,105 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const { Pool } = require('pg');
 const fs = require('fs');
+const path = require('path');
 
-const DB_DIR = path.join(__dirname, '../../data');
-const DB_PATH = path.join(DB_DIR, 'espaco_acolhimento.db');
-
-let db;
+let pool = null;
 
 /**
- * Initialize SQLite database and create tables if they don't exist
+ * Initialize PostgreSQL database connection pool
+ * Uses DATABASE_URL environment variable (provided by Render)
  */
 function initDatabase() {
-  // Ensure data directory exists
-  if (!fs.existsSync(DB_DIR)) {
-    fs.mkdirSync(DB_DIR, { recursive: true });
+  if (pool) return pool;
+
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    console.error('DATABASE_URL not set! Using fallback for local dev.');
   }
 
-  db = new Database(DB_PATH);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
+  pool = new Pool({
+    connectionString: connectionString || 'postgres://localhost:5432/espaco_acolhimento',
+    ssl: connectionString
+      ? { rejectUnauthorized: false }
+      : false,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000
+  });
 
-  // Create tables
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      role TEXT NOT NULL CHECK (role IN ('paciente', 'terapeuta')),
-      created_at TEXT DEFAULT (datetime('now'))
-    );
+  pool.on('error', (err) => {
+    console.error('Unexpected PostgreSQL pool error:', err);
+  });
 
-    CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-    CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+  // Test connection and create tables
+  pool.query('SELECT NOW()')
+    .then(() => {
+      console.log('PostgreSQL connected successfully.');
+      return createTables();
+    })
+    .then(() => {
+      console.log('Database tables ready.');
+    })
+    .catch((err) => {
+      console.error('Database initialization error:', err.message);
+    });
 
-    CREATE TABLE IF NOT EXISTS checkins (
-      id TEXT PRIMARY KEY,
-      patient_id TEXT NOT NULL,
-      date TEXT NOT NULL,
-      mood TEXT NOT NULL,
-      mood_emoji TEXT,
-      wellness_score INTEGER CHECK (wellness_score BETWEEN 1 AND 10),
-      triggers TEXT DEFAULT '[]',
-      created_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_checkins_patient_id ON checkins(patient_id);
-    CREATE INDEX IF NOT EXISTS idx_checkins_date ON checkins(date DESC);
-
-    CREATE TABLE IF NOT EXISTS sleep_records (
-      id TEXT PRIMARY KEY,
-      patient_id TEXT NOT NULL,
-      date TEXT NOT NULL,
-      sleep_hours REAL NOT NULL CHECK (sleep_hours >= 0 AND sleep_hours <= 24),
-      sleep_quality TEXT,
-      sleep_notes TEXT,
-      created_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_sleep_records_patient_id ON sleep_records(patient_id);
-    CREATE INDEX IF NOT EXISTS idx_sleep_records_date ON sleep_records(date DESC);
-
-    CREATE TABLE IF NOT EXISTS journal_entries (
-      id TEXT PRIMARY KEY,
-      patient_id TEXT NOT NULL,
-      date TEXT NOT NULL,
-      content TEXT NOT NULL,
-      privacy TEXT NOT NULL CHECK (privacy IN ('shared', 'private')),
-      audio_url TEXT,
-      created_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_journal_entries_patient_id ON journal_entries(patient_id);
-    CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(date DESC);
-    CREATE INDEX IF NOT EXISTS idx_journal_entries_privacy ON journal_entries(privacy);
-  `);
-
-  console.log('SQLite database initialized at:', DB_PATH);
-  return db;
+  return pool;
 }
 
 /**
- * Get the database instance
+ * Create tables from schema.sql
  */
-function getDb() {
-  if (!db) {
-    initDatabase();
-  }
-  return db;
+async function createTables() {
+  const schemaPath = path.join(__dirname, '../../database/schema.sql');
+  const schema = fs.readFileSync(schemaPath, 'utf8');
+  await pool.query(schema);
+}
+
+/**
+ * Get the connection pool
+ */
+function getPool() {
+  if (!pool) initDatabase();
+  return pool;
 }
 
 /**
  * Execute a query that returns rows (SELECT)
  * @param {string} sql
- * @param {object} params - named parameters { param1: value1, ... }
+ * @param {Array} params - positional parameters [$1, $2, ...]
  * @returns {Array} rows
  */
-function all(sql, params = {}) {
-  return getDb().prepare(sql).all(params);
+async function all(sql, params = []) {
+  const result = await getPool().query(sql, params);
+  return result.rows;
 }
 
 /**
- * Execute a query that returns a single row (SELECT ... LIMIT 1)
+ * Execute a query that returns a single row
  * @param {string} sql
- * @param {object} params
+ * @param {Array} params
  * @returns {object|undefined} row
  */
-function get(sql, params = {}) {
-  return getDb().prepare(sql).get(params);
+async function get(sql, params = []) {
+  const result = await getPool().query(sql, params);
+  return result.rows[0];
 }
 
 /**
- * Execute an INSERT/UPDATE/DELETE and return info
+ * Execute an INSERT/UPDATE/DELETE
  * @param {string} sql
- * @param {object} params
- * @returns {object} { lastInsertRowid, changes }
+ * @param {Array} params
+ * @returns {object} { rowCount }
  */
-function run(sql, params = {}) {
-  return getDb().prepare(sql).run(params);
+async function run(sql, params = []) {
+  const result = await getPool().query(sql, params);
+  return { rowCount: result.rowCount };
 }
 
 module.exports = {
   initDatabase,
-  getDb,
+  getPool,
   all,
   get,
   run

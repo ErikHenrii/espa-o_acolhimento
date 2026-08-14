@@ -5,12 +5,12 @@ const { all, get } = require('../config/database');
  */
 const getPatients = async (req, res) => {
   try {
-    const patients = all(
+    const patients = await all(
       `SELECT id, name, email, created_at 
        FROM users 
        WHERE role = 'paciente' 
        ORDER BY name ASC`,
-      {}
+      []
     );
 
     return res.status(200).json({
@@ -33,11 +33,11 @@ const getPatientHistory = async (req, res) => {
     const { id } = req.params;
 
     // Verify patient exists and has role 'paciente'
-    const patient = get(
+    const patient = await get(
       `SELECT id, name, email, created_at 
        FROM users 
-       WHERE id = @id AND role = 'paciente'`,
-      { id }
+       WHERE id = $1 AND role = 'paciente'`,
+      [id]
     );
 
     if (!patient) {
@@ -47,30 +47,33 @@ const getPatientHistory = async (req, res) => {
       });
     }
 
-    const checkins = all(
+    const checkins = await all(
       `SELECT id, patient_id, date, mood, mood_emoji, wellness_score, triggers, created_at
-       FROM checkins WHERE patient_id = @id
+       FROM checkins WHERE patient_id = $1
        ORDER BY date DESC, created_at DESC`,
-      { id }
+      [id]
     );
 
-    const sleepRecords = all(
+    const sleepRecords = await all(
       `SELECT id, patient_id, date, sleep_hours, sleep_quality, sleep_notes, created_at
-       FROM sleep_records WHERE patient_id = @id
+       FROM sleep_records WHERE patient_id = $1
        ORDER BY date DESC, created_at DESC`,
-      { id }
+      [id]
     );
 
-    const journalEntries = all(
+    const journalEntries = await all(
       `SELECT id, patient_id, date, content, privacy, audio_url, created_at
-       FROM journal_entries WHERE patient_id = @id AND privacy = 'shared'
+       FROM journal_entries WHERE patient_id = $1 AND privacy = 'shared'
        ORDER BY date DESC, created_at DESC`,
-      { id }
+      [id]
     );
 
-    // Parse triggers from JSON string
+    // Parse triggers from JSON
     checkins.forEach(c => {
-      try { c.triggers = JSON.parse(c.triggers || '[]'); } catch { c.triggers = []; }
+      if (typeof c.triggers === 'string') {
+        try { c.triggers = JSON.parse(c.triggers || '[]'); } catch { c.triggers = []; }
+      }
+      if (!Array.isArray(c.triggers)) c.triggers = [];
     });
 
     return res.status(200).json({
