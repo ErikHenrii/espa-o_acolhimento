@@ -4,27 +4,22 @@ const { get, run } = require('./database');
 
 /**
  * Seed the therapist account if it doesn't exist yet.
- * SAFE for Render Free: only creates the account on FIRST run.
- * On subsequent restarts (even with a fresh disk), it checks by email
- * and skips if the account already exists. If the disk was wiped,
- * the account is recreated with default credentials + must_change_credentials=1.
- *
- * IMPORTANT: This NEVER overwrites an existing account's email or password.
+ * SAFE for Render: only creates the account on FIRST run.
+ * On subsequent restarts, it checks by email and skips if the account
+ * already exists. Since we now use PostgreSQL (persistent), the data
+ * survives restarts — this is just a safety net for initial deployment.
  */
-function seedTherapist() {
+async function seedTherapist() {
   const therapistEmail = process.env.THERAPIST_EMAIL || 'jaqueline@espacoacolhimento.com.br';
   const therapistName = process.env.THERAPIST_NAME || 'Jaqueline Camila';
   const therapistPassword = process.env.THERAPIST_PASSWORD || 'jac123456';
 
-  const existing = get(
+  const existing = await get(
     'SELECT id, must_change_credentials FROM users WHERE email = @email',
     { email: therapistEmail }
   );
 
   if (existing) {
-    // Account already exists — do NOT touch it.
-    // This is the critical safety: if the terapeuta already changed their
-    // email/password, we must not overwrite it.
     console.log('Therapist account already exists, skipping seed.');
     return;
   }
@@ -32,7 +27,7 @@ function seedTherapist() {
   const passwordHash = bcrypt.hashSync(therapistPassword, 10);
   const id = crypto.randomUUID();
 
-  run(
+  await run(
     `INSERT INTO users (id, name, email, password_hash, role, must_change_credentials)
      VALUES (@id, @name, @email, @passwordHash, @role, @mustChange)`,
     { id, name: therapistName, email: therapistEmail, passwordHash, role: 'terapeuta', mustChange: 1 }

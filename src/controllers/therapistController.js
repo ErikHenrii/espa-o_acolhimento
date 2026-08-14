@@ -11,11 +11,11 @@ function sanitizeString(str) {
 
 /**
  * List all registered patients
- * Returns: { patients: [...] } with frontend-friendly field names including avg_score
+ * Returns: { patients: [...] } with frontend-friendly field names
  */
 const getPatients = async (req, res) => {
   try {
-    const patients = all(
+    const patients = await all(
       `SELECT id, name, email, created_at 
        FROM users 
        WHERE role = 'paciente' 
@@ -23,9 +23,9 @@ const getPatients = async (req, res) => {
       {}
     );
 
-    // Compute avg wellness score for each patient from their checkins
-    const patientsWithStats = patients.map(p => {
-      const checkinData = all(
+    const patientsWithStats = [];
+    for (const p of patients) {
+      const checkinData = await all(
         `SELECT wellness_score FROM checkins WHERE patient_id = @patientId ORDER BY created_at DESC LIMIT 30`,
         { patientId: p.id }
       );
@@ -35,7 +35,7 @@ const getPatients = async (req, res) => {
         ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
         : 0;
 
-      const lastActivity = all(
+      const lastActivity = await all(
         `SELECT created_at FROM checkins WHERE patient_id = @patientId ORDER BY created_at DESC LIMIT 1`,
         { patientId: p.id }
       );
@@ -45,13 +45,13 @@ const getPatients = async (req, res) => {
       else if (avgScore >= 5) status = 'atencao';
       else if (avgScore > 0) status = 'critico';
 
-      return {
+      patientsWithStats.push({
         ...p,
         avg_score: avgScore,
         last_activity: lastActivity.length > 0 ? lastActivity[0].created_at : p.created_at,
         status
-      };
-    });
+      });
+    }
 
     return res.status(200).json({
       patients: patientsWithStats
@@ -67,14 +67,13 @@ const getPatients = async (req, res) => {
 
 /**
  * Get detailed history of a specific patient (only shared journal entries)
- * Returns data in frontend-friendly format with 'overview', 'checkins', 'sleep', 'journals'
+ * Returns data in frontend-friendly format
  */
 const getPatientHistory = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Verify patient exists and has role 'paciente'
-    const patient = get(
+    const patient = await get(
       `SELECT id, name, email, created_at 
        FROM users 
        WHERE id = @id AND role = 'paciente'`,
@@ -88,28 +87,27 @@ const getPatientHistory = async (req, res) => {
       });
     }
 
-    const checkins = all(
+    const checkins = await all(
       `SELECT id, patient_id, date, mood, mood_emoji, wellness_score, triggers, notes, created_at
        FROM checkins WHERE patient_id = @id
        ORDER BY date DESC, created_at DESC`,
       { id }
     );
 
-    const sleepRecords = all(
+    const sleepRecords = await all(
       `SELECT id, patient_id, date, sleep_hours, sleep_quality, sleep_notes, created_at
        FROM sleep_records WHERE patient_id = @id
        ORDER BY date DESC, created_at DESC`,
       { id }
     );
 
-    const journalEntries = all(
+    const journalEntries = await all(
       `SELECT id, patient_id, date, content, privacy, audio_url, created_at
        FROM journal_entries WHERE patient_id = @id AND privacy = 'shared'
        ORDER BY date DESC, created_at DESC`,
       { id }
     );
 
-    // Compute avg score for overview
     const scores = checkins.map(c => c.wellness_score).filter(s => s != null);
     const avgScore = scores.length > 0
       ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
@@ -120,7 +118,6 @@ const getPatientHistory = async (req, res) => {
     else if (avgScore >= 5) status = 'atencao';
     else if (avgScore > 0) status = 'critico';
 
-    // Map to frontend-friendly format
     const checkinsMapped = checkins.map(c => {
       let triggers = [];
       try { triggers = JSON.parse(c.triggers || '[]'); } catch { triggers = []; }

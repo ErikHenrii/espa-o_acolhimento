@@ -15,44 +15,38 @@ function sanitizeTriggers(triggers) {
   return triggers
     .map(t => sanitizeString(String(t)))
     .filter(t => t.length > 0 && t.length <= 50)
-    .slice(0, 10); // max 10 triggers
+    .slice(0, 10);
 }
 
 /**
  * Get all data for the authenticated patient
- * Returns data in the format the frontend expects:
- *   { checkins, sleep, journals }
- * With frontend-friendly field aliases:
- *   checkins:  score (from wellness_score), notes, triggers (array), mood_emoji
- *   sleep:     hours (from sleep_hours), quality (from sleep_quality), notes (from sleep_notes)
- *   journals:  is_shared (from privacy === 'shared'), content
+ * Returns: { checkins, sleep, journals } with frontend-friendly field aliases
  */
 const getData = async (req, res) => {
   try {
     const patientId = req.user.id;
 
-    const checkins = all(
+    const checkins = await all(
       `SELECT id, patient_id, date, mood, mood_emoji, wellness_score, triggers, notes, created_at
        FROM checkins WHERE patient_id = @patientId
        ORDER BY date DESC, created_at DESC`,
       { patientId }
     );
 
-    const sleepRecords = all(
+    const sleepRecords = await all(
       `SELECT id, patient_id, date, sleep_hours, sleep_quality, sleep_notes, created_at
        FROM sleep_records WHERE patient_id = @patientId
        ORDER BY date DESC, created_at DESC`,
       { patientId }
     );
 
-    const journalEntries = all(
+    const journalEntries = await all(
       `SELECT id, patient_id, date, content, privacy, audio_url, created_at
        FROM journal_entries WHERE patient_id = @patientId
        ORDER BY date DESC, created_at DESC`,
       { patientId }
     );
 
-    // Map to frontend-friendly format
     const checkinsMapped = checkins.map(c => {
       let triggers = [];
       try { triggers = JSON.parse(c.triggers || '[]'); } catch { triggers = []; }
@@ -62,9 +56,9 @@ const getData = async (req, res) => {
         date: c.date,
         mood: c.mood,
         mood_emoji: c.mood_emoji,
-        score: c.wellness_score,        // alias
+        score: c.wellness_score,
         triggers: triggers,
-        notes: c.notes || '',            // alias
+        notes: c.notes || '',
         created_at: c.created_at
       };
     });
@@ -73,9 +67,9 @@ const getData = async (req, res) => {
       id: s.id,
       patient_id: s.patient_id,
       date: s.date,
-      hours: s.sleep_hours,              // alias
-      quality: s.sleep_quality,          // alias
-      notes: s.sleep_notes || '',        // alias
+      hours: s.sleep_hours,
+      quality: s.sleep_quality,
+      notes: s.sleep_notes || '',
       created_at: s.created_at
     }));
 
@@ -84,7 +78,7 @@ const getData = async (req, res) => {
       patient_id: j.patient_id,
       date: j.date,
       content: j.content,
-      is_shared: j.privacy === 'shared', // alias
+      is_shared: j.privacy === 'shared',
       privacy: j.privacy,
       audio_url: j.audio_url,
       created_at: j.created_at
@@ -106,18 +100,14 @@ const getData = async (req, res) => {
 
 /**
  * Create a new mood/wellness check-in
- * Accepts both backend field names and frontend-friendly aliases:
- *   date (required), mood (required), wellness_score OR score, mood_emoji, triggers, notes
  */
 const createCheckin = async (req, res) => {
   try {
     const patientId = req.user.id;
     let { date, mood, mood_emoji, wellness_score, score, triggers, notes } = req.body;
 
-    // Use alias 'score' if wellness_score is not provided
     const finalScore = wellness_score !== undefined ? wellness_score : score;
 
-    // Sanitize
     mood = sanitizeString(mood);
     mood_emoji = mood_emoji ? sanitizeString(mood_emoji) : null;
     notes = notes ? sanitizeString(notes) : '';
@@ -141,7 +131,7 @@ const createCheckin = async (req, res) => {
     const id = crypto.randomUUID();
     const triggersJson = JSON.stringify(triggersArray);
 
-    run(
+    await run(
       `INSERT INTO checkins (id, patient_id, date, mood, mood_emoji, wellness_score, triggers, notes)
        VALUES (@id, @patientId, @date, @mood, @moodEmoji, @score, @triggers, @notes)`,
       { id, patientId, date, mood, moodEmoji: mood_emoji, score: scoreInt, triggers: triggersJson, notes }
@@ -172,20 +162,16 @@ const createCheckin = async (req, res) => {
 
 /**
  * Create a new sleep record
- * Accepts both backend and frontend-friendly field names:
- *   date (required), sleep_hours OR hours, sleep_quality OR quality, sleep_notes OR notes
  */
 const createSleep = async (req, res) => {
   try {
     const patientId = req.user.id;
     let { date, sleep_hours, hours, sleep_quality, quality, sleep_notes, notes } = req.body;
 
-    // Use aliases if backend names are not provided
     const finalHours = sleep_hours !== undefined ? sleep_hours : hours;
     const finalQuality = sleep_quality !== undefined ? sleep_quality : quality;
     const finalNotes = sleep_notes !== undefined ? sleep_notes : notes;
 
-    // Sanitize
     const qualityStr = finalQuality ? sanitizeString(String(finalQuality)) : null;
     const notesStr = finalNotes ? sanitizeString(finalNotes) : '';
 
@@ -206,7 +192,7 @@ const createSleep = async (req, res) => {
 
     const id = crypto.randomUUID();
 
-    run(
+    await run(
       `INSERT INTO sleep_records (id, patient_id, date, sleep_hours, sleep_quality, sleep_notes)
        VALUES (@id, @patientId, @date, @hours, @sleepQuality, @sleepNotes)`,
       { id, patientId, date, hours: hoursFloat, sleepQuality: qualityStr, sleepNotes: notesStr }
@@ -235,18 +221,14 @@ const createSleep = async (req, res) => {
 
 /**
  * Create a new journal entry
- * Accepts both backend and frontend-friendly field names:
- *   date (required), content (required), privacy OR is_shared, audio_url
  */
 const createJournal = async (req, res) => {
   try {
     const patientId = req.user.id;
     let { date, content, privacy, is_shared, audio_url } = req.body;
 
-    // Sanitize content (keep line breaks, strip HTML tags)
     content = typeof content === 'string' ? content.replace(/<[^>]*>/g, '').trim() : '';
 
-    // Derive privacy from either 'privacy' or 'is_shared'
     let finalPrivacy;
     if (privacy) {
       finalPrivacy = privacy === 'shared' ? 'shared' : 'private';
@@ -274,7 +256,7 @@ const createJournal = async (req, res) => {
 
     const id = crypto.randomUUID();
 
-    run(
+    await run(
       `INSERT INTO journal_entries (id, patient_id, date, content, privacy, audio_url)
        VALUES (@id, @patientId, @date, @content, @privacy, @audioUrl)`,
       { id, patientId, date, content, privacy: finalPrivacy, audioUrl: audio_url }

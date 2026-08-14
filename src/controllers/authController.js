@@ -7,24 +7,15 @@ const { get, run } = require('../config/database');
 // Input sanitization helpers
 // ============================================================
 
-/**
- * Basic email validation (RFC 5322 simplified)
- */
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-/**
- * Strip HTML tags and trim whitespace from string input
- */
 function sanitizeString(str) {
   if (typeof str !== 'string') return '';
   return str.replace(/<[^>]*>/g, '').trim();
 }
 
-/**
- * Validate password strength
- */
 function validatePassword(password) {
   if (!password || typeof password !== 'string') return false;
   if (password.length < 6) return false;
@@ -39,7 +30,6 @@ const register = async (req, res) => {
   try {
     let { name, email, password } = req.body;
 
-    // Sanitize inputs
     name = sanitizeString(name);
     email = sanitizeString(email).toLowerCase();
     password = typeof password === 'string' ? password.trim() : '';
@@ -65,8 +55,7 @@ const register = async (req, res) => {
       });
     }
 
-    // Check if user already exists
-    const existingUser = get(
+    const existingUser = await get(
       'SELECT id FROM users WHERE email = @email',
       { email }
     );
@@ -78,26 +67,21 @@ const register = async (req, res) => {
       });
     }
 
-    // Hash password
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
-
-    // Generate UUID
     const userId = crypto.randomUUID();
 
-    // Insert new patient (must_change_credentials = 0 for self-registered patients)
-    run(
+    await run(
       `INSERT INTO users (id, name, email, password_hash, role, must_change_credentials)
        VALUES (@id, @name, @email, @passwordHash, @role, @mustChange)`,
       { id: userId, name, email, passwordHash, role: 'paciente', mustChange: 0 }
     );
 
-    const newUser = get(
+    const newUser = await get(
       'SELECT id, name, email, role, must_change_credentials, created_at FROM users WHERE id = @id',
       { id: userId }
     );
 
-    // Generate JWT Token
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
       console.error('JWT_SECRET is not configured!');
@@ -108,14 +92,8 @@ const register = async (req, res) => {
     }
 
     const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '7d';
-
     const token = jwt.sign(
-      {
-        id: newUser.id,
-        role: newUser.role,
-        name: newUser.name,
-        email: newUser.email
-      },
+      { id: newUser.id, role: newUser.role, name: newUser.name, email: newUser.email },
       jwtSecret,
       { expiresIn: jwtExpiresIn }
     );
@@ -148,7 +126,6 @@ const login = async (req, res) => {
   try {
     let { email, password } = req.body;
 
-    // Sanitize inputs
     email = sanitizeString(email).toLowerCase();
     password = typeof password === 'string' ? password : '';
 
@@ -159,8 +136,7 @@ const login = async (req, res) => {
       });
     }
 
-    // Find user
-    const user = get(
+    const user = await get(
       'SELECT id, name, email, password_hash, role, must_change_credentials, created_at FROM users WHERE email = @email',
       { email }
     );
@@ -172,7 +148,6 @@ const login = async (req, res) => {
       });
     }
 
-    // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -181,7 +156,6 @@ const login = async (req, res) => {
       });
     }
 
-    // Generate token
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
       console.error('JWT_SECRET is not configured!');
@@ -192,14 +166,8 @@ const login = async (req, res) => {
     }
 
     const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '7d';
-
     const token = jwt.sign(
-      {
-        id: user.id,
-        role: user.role,
-        name: user.name,
-        email: user.email
-      },
+      { id: user.id, role: user.role, name: user.name, email: user.email },
       jwtSecret,
       { expiresIn: jwtExpiresIn }
     );
@@ -233,12 +201,10 @@ const updateCredentials = async (req, res) => {
     const userId = req.user.id;
     let { current_password, new_email, new_password } = req.body;
 
-    // Sanitize
     current_password = typeof current_password === 'string' ? current_password : '';
     new_email = new_email ? sanitizeString(new_email).toLowerCase() : null;
     new_password = typeof new_password === 'string' ? new_password.trim() : '';
 
-    // At least one field must be provided
     if (!new_email && !new_password) {
       return res.status(400).json({
         error: 'Dados incompletos',
@@ -246,8 +212,7 @@ const updateCredentials = async (req, res) => {
       });
     }
 
-    // Fetch current user with password hash
-    const user = get(
+    const user = await get(
       'SELECT id, email, password_hash FROM users WHERE id = @id',
       { id: userId }
     );
@@ -259,7 +224,6 @@ const updateCredentials = async (req, res) => {
       });
     }
 
-    // Validate current password
     const isCurrentValid = await bcrypt.compare(current_password, user.password_hash);
     if (!isCurrentValid) {
       return res.status(401).json({
@@ -271,7 +235,6 @@ const updateCredentials = async (req, res) => {
     let updates = [];
     let params = { id: userId };
 
-    // Handle email update
     if (new_email) {
       if (!isValidEmail(new_email)) {
         return res.status(400).json({
@@ -280,9 +243,8 @@ const updateCredentials = async (req, res) => {
         });
       }
 
-      // Check for duplicate email (excluding current user)
       if (new_email !== user.email) {
-        const emailTaken = get(
+        const emailTaken = await get(
           'SELECT id FROM users WHERE email = @email AND id != @id',
           { email: new_email, id: userId }
         );
@@ -299,7 +261,6 @@ const updateCredentials = async (req, res) => {
       }
     }
 
-    // Handle password update
     if (new_password) {
       if (!validatePassword(new_password)) {
         return res.status(400).json({
@@ -313,35 +274,26 @@ const updateCredentials = async (req, res) => {
       params.newHash = newHash;
     }
 
-    // Always clear the must_change_credentials flag
     updates.push('must_change_credentials = 0');
 
-    if (updates.length > 1) { // more than just the flag
-      run(
+    if (updates.length > 1) {
+      await run(
         `UPDATE users SET ${updates.join(', ')} WHERE id = @id`,
         params
       );
     } else {
-      // Only the flag update
-      run('UPDATE users SET must_change_credentials = 0 WHERE id = @id', { id: userId });
+      await run('UPDATE users SET must_change_credentials = 0 WHERE id = @id', { id: userId });
     }
 
-    // Fetch updated user
-    const updatedUser = get(
+    const updatedUser = await get(
       'SELECT id, name, email, role, must_change_credentials, created_at FROM users WHERE id = @id',
       { id: userId }
     );
 
-    // Generate a new token (since email may have changed)
     const jwtSecret = process.env.JWT_SECRET;
     const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '7d';
     const token = jwt.sign(
-      {
-        id: updatedUser.id,
-        role: updatedUser.role,
-        name: updatedUser.name,
-        email: updatedUser.email
-      },
+      { id: updatedUser.id, role: updatedUser.role, name: updatedUser.name, email: updatedUser.email },
       jwtSecret,
       { expiresIn: jwtExpiresIn }
     );
@@ -362,7 +314,7 @@ const updateCredentials = async (req, res) => {
     console.error('Erro ao atualizar credenciais:', error);
     return res.status(500).json({
       error: 'Erro interno',
-      message: 'Não foi possível atualizar as credenciais. Tente novamente.'
+      message: 'Ocorreu um erro ao atualizar as credenciais. Tente novamente.'
     });
   }
 };

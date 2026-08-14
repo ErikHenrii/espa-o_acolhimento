@@ -20,7 +20,16 @@ services:
       - key: THERAPIST_NAME
         value: Jaqueline Camila
       - key: CORS_ORIGINS
-        # Leave empty or omit to allow all origins (needed for Render Free
-        # since the URL changes on each deploy). Set to your custom domain(s)
-        # separated by commas when you have a fixed frontend URL.
         value: ""
+      - key: DATABASE_URL
+        fromDatabase:
+          name: espaco-acolhimento-db
+          property: connectionString
+      - key: DATABASE_SSL
+        value: "true"
+
+databases:
+  - name: espaco-acolhimento-db
+    plan: free
+    databaseName: espaco_acolhimento
+    user: espaco_user

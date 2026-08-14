@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3000;
 // ============================================================
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
-  : true; // true = allow all (development default)
+  : true;
 
 const corsOptions = {
   origin: allowedOrigins,
@@ -30,7 +30,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // ============================================================
-// Body parsing with size limit (security: prevents oversized payloads)
+// Body parsing with size limit
 // ============================================================
 app.use(express.json({ limit: '256kb' }));
 app.use(express.urlencoded({ extended: true, limit: '256kb' }));
@@ -39,15 +39,14 @@ app.use(express.urlencoded({ extended: true, limit: '256kb' }));
 // Simple rate limiter for auth endpoints (in-memory, per-IP)
 // ============================================================
 const authAttempts = new Map();
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
-const RATE_LIMIT_MAX = 20; // max 20 attempts per window
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000;
+const RATE_LIMIT_MAX = 20;
 
 function authRateLimiter(req, res, next) {
   const ip = req.ip || req.socket?.remoteAddress || 'unknown';
   const now = Date.now();
   const record = authAttempts.get(ip) || { count: 0, firstAt: now };
 
-  // Reset window
   if (now - record.firstAt > RATE_LIMIT_WINDOW) {
     record.count = 0;
     record.firstAt = now;
@@ -67,25 +66,7 @@ function authRateLimiter(req, res, next) {
 }
 
 // ============================================================
-// Initialize database (auto-creates tables on startup)
-// ============================================================
-initDatabase();
-
-// Seed therapist account automatically (safe — skips if already exists)
-seedTherapist();
-
-// Clean up rate limiter periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, record] of authAttempts.entries()) {
-    if (now - record.firstAt > RATE_LIMIT_WINDOW) {
-      authAttempts.delete(ip);
-    }
-  }
-}, RATE_LIMIT_WINDOW);
-
-// ============================================================
-// Serve static files from 'public' folder
+// Static files
 // ============================================================
 const publicPath = path.join(__dirname, '../public');
 app.use(express.static(publicPath, {
@@ -103,8 +84,6 @@ app.use(express.static(publicPath, {
 // ============================================================
 // API Routes
 // ============================================================
-
-// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'UP',
@@ -118,7 +97,7 @@ app.use('/api/auth', authRateLimiter, authRoutes);
 app.use('/api/patient', patientRoutes);
 app.use('/api/therapist', therapistRoutes);
 
-// SPA fallback for non-API routes — serves index.html (landing page)
+// SPA fallback
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'Endpoint da API não encontrado' });
@@ -131,9 +110,7 @@ app.get('*', (req, res, next) => {
   });
 });
 
-// ============================================================
 // Global error handler
-// ============================================================
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({
@@ -143,14 +120,35 @@ app.use((err, req, res, next) => {
 });
 
 // ============================================================
-// Start Server
+// Start Server (async — initializes database first)
 // ============================================================
-const startServer = () => {
-  app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
-    console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
-  });
-};
+async function startServer() {
+  try {
+    // Initialize PostgreSQL database
+    await initDatabase();
+
+    // Seed therapist account (safe — skips if already exists)
+    await seedTherapist();
+
+    // Clean up rate limiter periodically
+    setInterval(() => {
+      const now = Date.now();
+      for (const [ip, record] of authAttempts.entries()) {
+        if (now - record.firstAt > RATE_LIMIT_WINDOW) {
+          authAttempts.delete(ip);
+        }
+      }
+    }, RATE_LIMIT_WINDOW);
+
+    app.listen(PORT, () => {
+      console.log(`Servidor rodando na porta ${PORT}`);
+      console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
 
 startServer();
 
