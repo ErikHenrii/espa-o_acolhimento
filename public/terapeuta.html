@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Espaço de Acolhimento - Jaqueline Camila | Painel Clínico</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'teal-dark': '#0f766e',
+            'teal-medium': '#14b8a6',
+            'teal-light': '#2dd4bf',
+            'amber-gold': '#ca8a04',
+            'amber-soft': '#fef08a',
+            'bg-neu': '#e0f2f1',
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Font Awesome CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-teal-50/40 text-slate-800 min-h-screen flex flex-col font-sans">
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Top Glass Header -->
+  <header class="glass-nav sticky top-0 z-40 px-4 md:px-8 py-3 flex items-center justify-between border-b border-teal-200/50 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-teal-700 text-amber-300 flex items-center justify-center shadow-md">
+        <i class="fa-solid fa-user-doctor text-xl"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base md:text-lg font-bold text-teal-950">Espaço de Acolhimento</h1>
+          <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-full border border-amber-300">
+            Painel Clínico
+          </span>
+        </div>
+        <p class="text-xs text-teal-700 font-medium">Jaqueline Camila • Psicóloga Responsável (CRP 06/XXXXX)</p>
+      </div>
+    </div>
+
+    <!-- Therapist User Profile & Logout -->
+    <div class="flex items-center gap-3">
+      <div class="hidden sm:flex flex-col text-right">
+        <span id="therapist-name" class="text-xs font-bold text-teal-950">Jaqueline Camila</span>
+        <span class="text-[10px] text-teal-600">Terapeuta Ativa</span>
+      </div>
+      <button id="btn-therapist-logout" title="Encerrar Sessão" class="px-3.5 py-2 rounded-xl bg-teal-100 hover:bg-rose-100 hover:text-rose-700 text-teal-800 text-xs font-semibold transition-all flex items-center gap-1.5 border border-teal-200">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        <span class="hidden sm:inline">Sair</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Wrapper -->
+  <main class="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+
+    <!-- Mobile Patient Switcher Dropdown (Shown only on small screens) -->
+    <div class="block md:hidden mb-4">
+      <label class="block text-xs font-bold text-teal-900 uppercase tracking-wider mb-1">Selecionar Paciente</label>
+      <select id="patient-select-mobile" class="w-full p-3 rounded-xl bg-white border border-teal-200 text-sm font-semibold text-teal-950 shadow-sm focus:ring-2 focus:ring-teal-500">
+        <option value="">Carregando pacientes...</option>
+      </select>
+    </div>
+
+    <!-- Desktop Grid Layout (12 Columns) -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+
+      <!-- SIDEBAR: Patient List (Col Span 4 / 3) -->
+      <aside class="hidden md:block md:col-span-4 lg:col-span-3 space-y-4">
+        <div class="glass border border-teal-200/60 rounded-2xl p-4 shadow-sm">
+          
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs font-bold text-teal-950 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-users text-teal-600"></i>
+              Meus Pacientes
+            </h2>
+            <span id="patient-count-badge" class="px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-bold">0</span>
+          </div>
+
+          <!-- Patient Search Input -->
+          <div class="relative mb-3">
+            <input type="text" id="patient-search-input" placeholder="Buscar por nome..."
+              class="w-full pl-8 pr-3 py-2 rounded-xl bg-white border border-teal-200/80 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-xs text-slate-400"></i>
+          </div>
+
+          <!-- Patient Cards Container -->
+          <div id="patient-list" class="space-y-2 max-h-[calc(100vh-250px)] overflow-y-auto pr-1">
+            <!-- Rendered dynamically by terapeuta.js -->
+            <div class="p-4 text-center text-xs text-slate-400">Carregando pacientes...</div>
+          </div>
+
+        </div>
+      </aside>
+
+      <!-- MAIN AREA: Selected Patient Details (Col Span 8 / 9) -->
+      <section class="md:col-span-8 lg:col-span-9 space-y-6">
+
+        <!-- EMPTY STATE (Shown when no patient selected) -->
+        <div id="empty-state-view" class="glass border border-teal-200/60 rounded-3xl p-12 text-center my-12 hidden">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center text-2xl">
+            <i class="fa-solid fa-folder-open"></i>
+          </div>
+          <h3 class="text-lg font-bold text-teal-950 mb-1">Nenhum Paciente Selecionado</h3>
+          <p class="text-sm text-slate-500 max-w-sm mx-auto">Selecione um paciente na lista ao lado para visualizar os gráficos de evolução, diário e registros de sono.</p>
+        </div>
+
+        <!-- ACTIVE PATIENT DETAILS VIEW -->
+        <div id="patient-details-view" class="space-y-6">
+
+          <!-- Patient Overview Card -->
+          <div id="patient-overview" class="glass border border-teal-200/80 rounded-3xl p-6 shadow-md relative overflow-hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-teal-700 to-teal-500 text-white flex items-center justify-center font-bold text-xl shadow-md">
+                  <span id="overview-avatar">P</span>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h2 id="overview-name" class="text-xl font-bold text-teal-950">Nome do Paciente</h2>
+                    <span id="overview-status-pill" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                      <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Estável
+                    </span>
+                  </div>
+                  <p id="overview-email" class="text-xs text-slate-500">paciente@email.com</p>
+                  <p id="overview-since" class="text-[11px] text-teal-700 mt-1 font-medium">Cadastrado em --/--/----</p>
+                </div>
+              </div>
+
+              <!-- Key Metrics Badges -->
+              <div class="grid grid-cols-3 gap-2 sm:flex sm:gap-3 text-center">
+                <div class="bg-white/80 p-2.5 rounded-xl border border-teal-100 shadow-sm min-w-[80px]">
+                  <span id="overview-count-checkins" class="block text-base font-bold text-teal-800">0</span>
+                  <span class="text-[10px] font-semibold text-slate-500 uppercase">Check-ins</span>
+                </div>
+                <div class="bg-white/80 p-2.5 rounded-xl border border-teal-100 shadow-sm min-w-[80px]">
+                  <span id="overview-count-sleep" class="block text-base font-bold text-teal-800">0</span>
+                  <span class="text-[10px] font-semibold text-slate-500 uppercase">Sono</span>
+                </div>
+                <div class="bg-white/80 p-2.5 rounded-xl border border-teal-100 shadow-sm min-w-[80px]">
+                  <span id="overview-count-journals" class="block text-base font-bold text-teal-800">0</span>
+                  <span class="text-[10px] font-semibold text-slate-500 uppercase">Diário</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Row (Mood & Sleep - 2 columns on lg screen) -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Mood Line Chart -->
+            <div class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold text-teal-950 uppercase tracking-wider flex items-center gap-2">
+                  <i class="fa-solid fa-chart-line text-teal-600"></i>
+                  Evolução do Humor (14 Dias)
+                </h3>
+                <span class="text-[10px] font-semibold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full">Escala 1 - 10</span>
+              </div>
+              <div id="therapist-mood-chart" class="w-full h-48 flex items-center justify-center relative">
+                <!-- SVG Line Chart rendered by terapeuta.js -->
+              </div>
+            </div>
+
+            <!-- Sleep Bar Chart -->
+            <div class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold text-teal-950 uppercase tracking-wider flex items-center gap-2">
+                  <i class="fa-solid fa-chart-column text-indigo-600"></i>
+                  Horas de Sono (14 Dias)
+                </h3>
+                <span class="text-[10px] font-semibold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">Horas/Noite</span>
+              </div>
+              <div id="therapist-sleep-chart" class="w-full h-48 flex items-center justify-center relative">
+                <!-- SVG Bar Chart rendered by terapeuta.js -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Activity Records Sections -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Recent Check-ins Card Column -->
+            <div class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3">
+              <h3 class="text-xs font-bold text-teal-950 uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-heart-pulse text-teal-600"></i>
+                Últimos Check-ins
+              </h3>
+              <div id="therapist-checkins-list" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+                <!-- Check-in cards rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Shared Journal Entries Column -->
+            <div class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3">
+              <h3 class="text-xs font-bold text-teal-950 uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-book-open text-amber-600"></i>
+                Entradas Compartilhadas do Diário
+              </h3>
+              <div id="therapist-journals-list" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+                <!-- Shared Journal cards rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Sleep Records Column -->
+            <div class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3">
+              <h3 class="text-xs font-bold text-teal-950 uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-moon text-indigo-600"></i>
+                Registros de Sono
+              </h3>
+              <div id="therapist-sleep-list" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+                <!-- Sleep cards rendered dynamically -->
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- Therapist JS Script -->
+  <script src="js/terapeuta.js"></script>
+</body>
+</html>

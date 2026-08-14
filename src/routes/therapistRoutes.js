@@ -1,0 +1,16 @@
+const express = require('express');
+const router = express.Router();
+const therapistController = require('../controllers/therapistController');
+const { authenticateToken, requireRole } = require('../middleware/authMiddleware');
+
+// Apply auth middleware and require 'terapeuta' role for all therapist routes
+router.use(authenticateToken);
+router.use(requireRole('terapeuta'));
+
+// GET /api/therapist/patients
+router.get('/patients', therapistController.getPatients);
+
+// GET /api/therapist/patient/:id/history
+router.get('/patient/:id/history', therapistController.getPatientHistory);
+
+module.exports = router;
