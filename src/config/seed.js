@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const { get, run } = require('./config/database');
+const { get, run } = require('./database');
 
 /**
  * Seed the therapist account if it doesn't exist yet.
