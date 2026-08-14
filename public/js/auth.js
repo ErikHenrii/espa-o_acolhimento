@@ -128,7 +128,7 @@
       rolePacienteBtn.className = "flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 text-teal-100 hover:text-white";
       authTabs.classList.add('hidden');
       switchTab('login');
-      document.getElementById('login-email').placeholder = "jaqueline@espacoacolhimento.com.br";
+      document.getElementById('login-email').placeholder = "terapeuta@espacoacolhimento.com";
     });
 
     // Tab Switcher

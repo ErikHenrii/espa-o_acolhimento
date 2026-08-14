@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { get, run } = require('../config/database');
 
 /**
@@ -26,9 +27,9 @@ const register = async (req, res) => {
     const normalizedEmail = email.trim().toLowerCase();
 
     // Check if user already exists
-    const existingUser = await get(
-      'SELECT id FROM users WHERE email = $1',
-      [normalizedEmail]
+    const existingUser = get(
+      'SELECT id FROM users WHERE email = @email',
+      { email: normalizedEmail }
     );
 
     if (existingUser) {
@@ -42,12 +43,19 @@ const register = async (req, res) => {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
+    // Generate UUID
+    const userId = crypto.randomUUID();
+
     // Insert new patient
-    const newUser = await get(
-      `INSERT INTO users (name, email, password_hash, role)
-       VALUES ($1, $2, $3, 'paciente')
-       RETURNING id, name, email, role, created_at`,
-      [name.trim(), normalizedEmail, passwordHash]
+    run(
+      `INSERT INTO users (id, name, email, password_hash, role)
+       VALUES (@id, @name, @email, @passwordHash, @role)`,
+      { id: userId, name: name.trim(), email: normalizedEmail, passwordHash, role: 'paciente' }
+    );
+
+    const newUser = get(
+      'SELECT id, name, email, role, created_at FROM users WHERE id = @id',
+      { id: userId }
     );
 
     // Generate JWT Token
@@ -96,9 +104,9 @@ const login = async (req, res) => {
     const normalizedEmail = email.trim().toLowerCase();
 
     // Find user
-    const user = await get(
-      'SELECT id, name, email, password_hash, role, created_at FROM users WHERE email = $1',
-      [normalizedEmail]
+    const user = get(
+      'SELECT id, name, email, password_hash, role, created_at FROM users WHERE email = @email',
+      { email: normalizedEmail }
     );
 
     if (!user) {

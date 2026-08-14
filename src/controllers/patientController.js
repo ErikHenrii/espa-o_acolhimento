@@ -8,33 +8,30 @@ const getData = async (req, res) => {
   try {
     const patientId = req.user.id;
 
-    const checkins = await all(
+    const checkins = all(
       `SELECT id, patient_id, date, mood, mood_emoji, wellness_score, triggers, created_at
-       FROM checkins WHERE patient_id = $1
+       FROM checkins WHERE patient_id = @patientId
        ORDER BY date DESC, created_at DESC`,
-      [patientId]
+      { patientId }
     );
 
-    const sleepRecords = await all(
+    const sleepRecords = all(
       `SELECT id, patient_id, date, sleep_hours, sleep_quality, sleep_notes, created_at
-       FROM sleep_records WHERE patient_id = $1
+       FROM sleep_records WHERE patient_id = @patientId
        ORDER BY date DESC, created_at DESC`,
-      [patientId]
+      { patientId }
     );
 
-    const journalEntries = await all(
+    const journalEntries = all(
       `SELECT id, patient_id, date, content, privacy, audio_url, created_at
-       FROM journal_entries WHERE patient_id = $1
+       FROM journal_entries WHERE patient_id = @patientId
        ORDER BY date DESC, created_at DESC`,
-      [patientId]
+      { patientId }
     );
 
-    // Parse triggers from JSON (PostgreSQL JSONB returns array/object already, but normalize)
+    // Parse triggers from JSON string
     checkins.forEach(c => {
-      if (typeof c.triggers === 'string') {
-        try { c.triggers = JSON.parse(c.triggers || '[]'); } catch { c.triggers = []; }
-      }
-      if (!Array.isArray(c.triggers)) c.triggers = [];
+      try { c.triggers = JSON.parse(c.triggers || '[]'); } catch { c.triggers = []; }
     });
 
     return res.status(200).json({
@@ -74,19 +71,21 @@ const createCheckin = async (req, res) => {
       });
     }
 
-    const triggersArray = JSON.stringify(triggers || []);
+    const id = crypto.randomUUID();
+    const triggersJson = JSON.stringify(triggers || []);
 
-    const checkin = await get(
-      `INSERT INTO checkins (patient_id, date, mood, mood_emoji, wellness_score, triggers)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, patient_id, date, mood, mood_emoji, wellness_score, triggers, created_at`,
-      [patientId, date, mood, mood_emoji || null, score, triggersArray]
+    run(
+      `INSERT INTO checkins (id, patient_id, date, mood, mood_emoji, wellness_score, triggers)
+       VALUES (@id, @patientId, @date, @mood, @moodEmoji, @score, @triggers)`,
+      { id, patientId, date, mood, moodEmoji: mood_emoji || null, score, triggers: triggersJson }
     );
 
-    if (typeof checkin.triggers === 'string') {
-      try { checkin.triggers = JSON.parse(checkin.triggers || '[]'); } catch { checkin.triggers = []; }
-    }
-    if (!Array.isArray(checkin.triggers)) checkin.triggers = [];
+    const checkin = get(
+      'SELECT id, patient_id, date, mood, mood_emoji, wellness_score, triggers, created_at FROM checkins WHERE id = @id',
+      { id }
+    );
+
+    try { checkin.triggers = JSON.parse(checkin.triggers || '[]'); } catch { checkin.triggers = []; }
 
     return res.status(201).json({
       message: 'Check-in registrado com sucesso!',
@@ -124,11 +123,17 @@ const createSleep = async (req, res) => {
       });
     }
 
-    const sleepRecord = await get(
-      `INSERT INTO sleep_records (patient_id, date, sleep_hours, sleep_quality, sleep_notes)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, patient_id, date, sleep_hours, sleep_quality, sleep_notes, created_at`,
-      [patientId, date, hours, sleep_quality || null, sleep_notes || null]
+    const id = crypto.randomUUID();
+
+    run(
+      `INSERT INTO sleep_records (id, patient_id, date, sleep_hours, sleep_quality, sleep_notes)
+       VALUES (@id, @patientId, @date, @hours, @sleepQuality, @sleepNotes)`,
+      { id, patientId, date, hours, sleepQuality: sleep_quality || null, sleepNotes: sleep_notes || null }
+    );
+
+    const sleepRecord = get(
+      'SELECT id, patient_id, date, sleep_hours, sleep_quality, sleep_notes, created_at FROM sleep_records WHERE id = @id',
+      { id }
     );
 
     return res.status(201).json({
@@ -160,12 +165,17 @@ const createJournal = async (req, res) => {
     }
 
     const entryPrivacy = privacy === 'shared' ? 'shared' : 'private';
+    const id = crypto.randomUUID();
 
-    const journalEntry = await get(
-      `INSERT INTO journal_entries (patient_id, date, content, privacy, audio_url)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, patient_id, date, content, privacy, audio_url, created_at`,
-      [patientId, date, content, entryPrivacy, audio_url || null]
+    run(
+      `INSERT INTO journal_entries (id, patient_id, date, content, privacy, audio_url)
+       VALUES (@id, @patientId, @date, @content, @privacy, @audioUrl)`,
+      { id, patientId, date, content, privacy: entryPrivacy, audioUrl: audio_url || null }
+    );
+
+    const journalEntry = get(
+      'SELECT id, patient_id, date, content, privacy, audio_url, created_at FROM journal_entries WHERE id = @id',
+      { id }
     );
 
     return res.status(201).json({
