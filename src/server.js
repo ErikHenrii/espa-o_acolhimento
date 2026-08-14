@@ -2,11 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { initDatabase } = require('./config/database');
+const { seedTherapist } = require('./config/seed');
 
 const authRoutes = require('./routes/authRoutes');
 const patientRoutes = require('./routes/patientRoutes');
 const therapistRoutes = require('./routes/therapistRoutes');
-const { initDatabase } = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,7 +16,13 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from 'public' folder if present
+// Initialize SQLite database (auto-creates tables on startup)
+initDatabase();
+
+// Seed therapist account automatically
+seedTherapist();
+
+// Serve static files from 'public' folder
 const publicPath = path.join(__dirname, '../public');
 app.use(express.static(publicPath));
 
@@ -46,22 +53,13 @@ app.get('*', (req, res, next) => {
   });
 });
 
-// Start Server & Optionally Initialize Database
-const startServer = async () => {
-  try {
-    // Optionally run initDatabase if needed on startup
-    if (process.env.AUTO_INIT_DB === 'true') {
-      await initDatabase();
-    }
-    
-    app.listen(PORT, () => {
-      console.log(`Servidor rodando na porta ${PORT}`);
-      console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
-    });
-  } catch (error) {
-    console.error('Falha ao iniciar o servidor:', error);
-    process.exit(1);
-  }
+// Start Server
+const startServer = () => {
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+    console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Banco SQLite: dados/espaco_acolhimento.db`);
+  });
 };
 
 startServer();

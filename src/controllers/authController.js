@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { query } = require('../config/database');
+const crypto = require('crypto');
+const { get, run } = require('../config/database');
 
 /**
  * Register a new patient
@@ -9,7 +10,6 @@ const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // Validations
     if (!name || !email || !password) {
       return res.status(400).json({
         error: 'Dados incompletos',
@@ -27,12 +27,12 @@ const register = async (req, res) => {
     const normalizedEmail = email.trim().toLowerCase();
 
     // Check if user already exists
-    const existingUser = await query(
-      'SELECT id FROM users WHERE LOWER(email) = $1',
-      [normalizedEmail]
+    const existingUser = get(
+      'SELECT id FROM users WHERE email = @email',
+      { email: normalizedEmail }
     );
 
-    if (existingUser.rows.length > 0) {
+    if (existingUser) {
       return res.status(400).json({
         error: 'E-mail em uso',
         message: 'Este e-mail já está cadastrado no sistema.'
@@ -43,15 +43,20 @@ const register = async (req, res) => {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
+    // Generate UUID
+    const userId = crypto.randomUUID();
+
     // Insert new patient
-    const insertResult = await query(
-      `INSERT INTO users (name, email, password_hash, role)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, name, email, role, created_at`,
-      [name.trim(), normalizedEmail, passwordHash, 'paciente']
+    run(
+      `INSERT INTO users (id, name, email, password_hash, role)
+       VALUES (@id, @name, @email, @passwordHash, @role)`,
+      { id: userId, name: name.trim(), email: normalizedEmail, passwordHash, role: 'paciente' }
     );
 
-    const newUser = insertResult.rows[0];
+    const newUser = get(
+      'SELECT id, name, email, role, created_at FROM users WHERE id = @id',
+      { id: userId }
+    );
 
     // Generate JWT Token
     const jwtSecret = process.env.JWT_SECRET || 'default_jwt_secret_change_me';
@@ -70,13 +75,7 @@ const register = async (req, res) => {
 
     return res.status(201).json({
       message: 'Cadastro realizado com sucesso!',
-      user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        created_at: newUser.created_at
-      },
+      user: newUser,
       token
     });
   } catch (error) {
@@ -105,19 +104,17 @@ const login = async (req, res) => {
     const normalizedEmail = email.trim().toLowerCase();
 
     // Find user
-    const result = await query(
-      'SELECT id, name, email, password_hash, role, created_at FROM users WHERE LOWER(email) = $1',
-      [normalizedEmail]
+    const user = get(
+      'SELECT id, name, email, password_hash, role, created_at FROM users WHERE email = @email',
+      { email: normalizedEmail }
     );
 
-    if (result.rows.length === 0) {
+    if (!user) {
       return res.status(401).json({
         error: 'Credenciais inválidas',
         message: 'E-mail ou senha incorretos.'
       });
     }
-
-    const user = result.rows[0];
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);

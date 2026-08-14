@@ -1,64 +1,132 @@
-const { Pool } = require('pg');
-const fs = require('fs');
+const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
-const connectionString = process.env.DATABASE_URL;
+const DB_DIR = path.join(__dirname, '../../data');
+const DB_PATH = path.join(DB_DIR, 'espaco_acolhimento.db');
 
-const isProduction = process.env.NODE_ENV === 'production';
-const isRender = connectionString && connectionString.includes('render.com');
+let db;
 
-const poolConfig = {
-  connectionString: connectionString || 'postgresql://postgres:postgres@localhost:5432/espaco_acolhimento'
-};
+/**
+ * Initialize SQLite database and create tables if they don't exist
+ */
+function initDatabase() {
+  // Ensure data directory exists
+  if (!fs.existsSync(DB_DIR)) {
+    fs.mkdirSync(DB_DIR, { recursive: true });
+  }
 
-if (isProduction || isRender) {
-  poolConfig.ssl = {
-    rejectUnauthorized: false
-  };
+  db = new Database(DB_PATH);
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+
+  // Create tables
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL CHECK (role IN ('paciente', 'terapeuta')),
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+    CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+
+    CREATE TABLE IF NOT EXISTS checkins (
+      id TEXT PRIMARY KEY,
+      patient_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      mood TEXT NOT NULL,
+      mood_emoji TEXT,
+      wellness_score INTEGER CHECK (wellness_score BETWEEN 1 AND 10),
+      triggers TEXT DEFAULT '[]',
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_checkins_patient_id ON checkins(patient_id);
+    CREATE INDEX IF NOT EXISTS idx_checkins_date ON checkins(date DESC);
+
+    CREATE TABLE IF NOT EXISTS sleep_records (
+      id TEXT PRIMARY KEY,
+      patient_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      sleep_hours REAL NOT NULL CHECK (sleep_hours >= 0 AND sleep_hours <= 24),
+      sleep_quality TEXT,
+      sleep_notes TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_sleep_records_patient_id ON sleep_records(patient_id);
+    CREATE INDEX IF NOT EXISTS idx_sleep_records_date ON sleep_records(date DESC);
+
+    CREATE TABLE IF NOT EXISTS journal_entries (
+      id TEXT PRIMARY KEY,
+      patient_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      content TEXT NOT NULL,
+      privacy TEXT NOT NULL CHECK (privacy IN ('shared', 'private')),
+      audio_url TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_journal_entries_patient_id ON journal_entries(patient_id);
+    CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(date DESC);
+    CREATE INDEX IF NOT EXISTS idx_journal_entries_privacy ON journal_entries(privacy);
+  `);
+
+  console.log('SQLite database initialized at:', DB_PATH);
+  return db;
 }
 
-const pool = new Pool(poolConfig);
-
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle PostgreSQL client:', err);
-});
+/**
+ * Get the database instance
+ */
+function getDb() {
+  if (!db) {
+    initDatabase();
+  }
+  return db;
+}
 
 /**
- * Execute a single query with parameters
- * @param {string} text 
- * @param {Array} params 
+ * Execute a query that returns rows (SELECT)
+ * @param {string} sql
+ * @param {object} params - named parameters { param1: value1, ... }
+ * @returns {Array} rows
  */
-const query = async (text, params) => {
-  const start = Date.now();
-  const res = await pool.query(text, params);
-  const duration = Date.now() - start;
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('Executed query', { text: text.substring(0, 100), duration, rows: res.rowCount });
-  }
-  return res;
-};
+function all(sql, params = {}) {
+  return getDb().prepare(sql).all(params);
+}
 
 /**
- * Initialize database schema from database/schema.sql
+ * Execute a query that returns a single row (SELECT ... LIMIT 1)
+ * @param {string} sql
+ * @param {object} params
+ * @returns {object|undefined} row
  */
-const initDatabase = async () => {
-  try {
-    const schemaPath = path.join(__dirname, '../../database/schema.sql');
-    if (fs.existsSync(schemaPath)) {
-      const sql = fs.readFileSync(schemaPath, 'utf8');
-      await pool.query(sql);
-      console.log('Database schema initialized successfully.');
-    } else {
-      console.warn(`Schema file not found at ${schemaPath}`);
-    }
-  } catch (error) {
-    console.error('Error initializing database schema:', error.message);
-    throw error;
-  }
-};
+function get(sql, params = {}) {
+  return getDb().prepare(sql).get(params);
+}
+
+/**
+ * Execute an INSERT/UPDATE/DELETE and return info
+ * @param {string} sql
+ * @param {object} params
+ * @returns {object} { lastInsertRowid, changes }
+ */
+function run(sql, params = {}) {
+  return getDb().prepare(sql).run(params);
+}
 
 module.exports = {
-  pool,
-  query,
-  initDatabase
+  initDatabase,
+  getDb,
+  all,
+  get,
+  run
 };

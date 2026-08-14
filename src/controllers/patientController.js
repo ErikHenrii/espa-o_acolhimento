@@ -1,4 +1,5 @@
-const { query } = require('../config/database');
+const crypto = require('crypto');
+const { all, get, run } = require('../config/database');
 
 /**
  * Get all data for the authenticated patient
@@ -7,26 +8,36 @@ const getData = async (req, res) => {
   try {
     const patientId = req.user.id;
 
-    // Fetch checkins, sleep records, and journal entries concurrently
-    const [checkinsRes, sleepRes, journalRes] = await Promise.all([
-      query(
-        'SELECT id, patient_id, date, mood, mood_emoji, wellness_score, triggers, created_at FROM checkins WHERE patient_id = $1 ORDER BY date DESC, created_at DESC',
-        [patientId]
-      ),
-      query(
-        'SELECT id, patient_id, date, sleep_hours, sleep_quality, sleep_notes, created_at FROM sleep_records WHERE patient_id = $1 ORDER BY date DESC, created_at DESC',
-        [patientId]
-      ),
-      query(
-        'SELECT id, patient_id, date, content, privacy, audio_url, created_at FROM journal_entries WHERE patient_id = $1 ORDER BY date DESC, created_at DESC',
-        [patientId]
-      )
-    ]);
+    const checkins = all(
+      `SELECT id, patient_id, date, mood, mood_emoji, wellness_score, triggers, created_at
+       FROM checkins WHERE patient_id = @patientId
+       ORDER BY date DESC, created_at DESC`,
+      { patientId }
+    );
+
+    const sleepRecords = all(
+      `SELECT id, patient_id, date, sleep_hours, sleep_quality, sleep_notes, created_at
+       FROM sleep_records WHERE patient_id = @patientId
+       ORDER BY date DESC, created_at DESC`,
+      { patientId }
+    );
+
+    const journalEntries = all(
+      `SELECT id, patient_id, date, content, privacy, audio_url, created_at
+       FROM journal_entries WHERE patient_id = @patientId
+       ORDER BY date DESC, created_at DESC`,
+      { patientId }
+    );
+
+    // Parse triggers from JSON string
+    checkins.forEach(c => {
+      try { c.triggers = JSON.parse(c.triggers || '[]'); } catch { c.triggers = []; }
+    });
 
     return res.status(200).json({
-      checkins: checkinsRes.rows,
-      sleep_records: sleepRes.rows,
-      journal_entries: journalRes.rows
+      checkins,
+      sleep_records: sleepRecords,
+      journal_entries: journalEntries
     });
   } catch (error) {
     console.error('Erro ao buscar dados do paciente:', error);
@@ -60,19 +71,25 @@ const createCheckin = async (req, res) => {
       });
     }
 
-    // Process triggers (array or object to JSON string/object for JSONB field)
-    const formattedTriggers = JSON.stringify(triggers || []);
+    const id = crypto.randomUUID();
+    const triggersJson = JSON.stringify(triggers || []);
 
-    const result = await query(
-      `INSERT INTO checkins (patient_id, date, mood, mood_emoji, wellness_score, triggers)
-       VALUES ($1, $2, $3, $4, $5, $6::jsonb)
-       RETURNING id, patient_id, date, mood, mood_emoji, wellness_score, triggers, created_at`,
-      [patientId, date, mood, mood_emoji || null, score, formattedTriggers]
+    run(
+      `INSERT INTO checkins (id, patient_id, date, mood, mood_emoji, wellness_score, triggers)
+       VALUES (@id, @patientId, @date, @mood, @moodEmoji, @score, @triggers)`,
+      { id, patientId, date, mood, moodEmoji: mood_emoji || null, score, triggers: triggersJson }
     );
+
+    const checkin = get(
+      'SELECT id, patient_id, date, mood, mood_emoji, wellness_score, triggers, created_at FROM checkins WHERE id = @id',
+      { id }
+    );
+
+    try { checkin.triggers = JSON.parse(checkin.triggers || '[]'); } catch { checkin.triggers = []; }
 
     return res.status(201).json({
       message: 'Check-in registrado com sucesso!',
-      checkin: result.rows[0]
+      checkin
     });
   } catch (error) {
     console.error('Erro ao criar checkin:', error);
@@ -106,16 +123,22 @@ const createSleep = async (req, res) => {
       });
     }
 
-    const result = await query(
-      `INSERT INTO sleep_records (patient_id, date, sleep_hours, sleep_quality, sleep_notes)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, patient_id, date, sleep_hours, sleep_quality, sleep_notes, created_at`,
-      [patientId, date, hours, sleep_quality || null, sleep_notes || null]
+    const id = crypto.randomUUID();
+
+    run(
+      `INSERT INTO sleep_records (id, patient_id, date, sleep_hours, sleep_quality, sleep_notes)
+       VALUES (@id, @patientId, @date, @hours, @sleepQuality, @sleepNotes)`,
+      { id, patientId, date, hours, sleepQuality: sleep_quality || null, sleepNotes: sleep_notes || null }
+    );
+
+    const sleepRecord = get(
+      'SELECT id, patient_id, date, sleep_hours, sleep_quality, sleep_notes, created_at FROM sleep_records WHERE id = @id',
+      { id }
     );
 
     return res.status(201).json({
       message: 'Registro de sono cadastrado com sucesso!',
-      sleep_record: result.rows[0]
+      sleep_record: sleepRecord
     });
   } catch (error) {
     console.error('Erro ao registrar sono:', error);
@@ -142,17 +165,22 @@ const createJournal = async (req, res) => {
     }
 
     const entryPrivacy = privacy === 'shared' ? 'shared' : 'private';
+    const id = crypto.randomUUID();
 
-    const result = await query(
-      `INSERT INTO journal_entries (patient_id, date, content, privacy, audio_url)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, patient_id, date, content, privacy, audio_url, created_at`,
-      [patientId, date, content, entryPrivacy, audio_url || null]
+    run(
+      `INSERT INTO journal_entries (id, patient_id, date, content, privacy, audio_url)
+       VALUES (@id, @patientId, @date, @content, @privacy, @audioUrl)`,
+      { id, patientId, date, content, privacy: entryPrivacy, audioUrl: audio_url || null }
+    );
+
+    const journalEntry = get(
+      'SELECT id, patient_id, date, content, privacy, audio_url, created_at FROM journal_entries WHERE id = @id',
+      { id }
     );
 
     return res.status(201).json({
       message: 'Entrada no diário criada com sucesso!',
-      journal_entry: result.rows[0]
+      journal_entry: journalEntry
     });
   } catch (error) {
     console.error('Erro ao criar diário:', error);
