@@ -14,7 +14,15 @@ const authenticateToken = (req, res, next) => {
     });
   }
 
-  const secret = process.env.JWT_SECRET || 'default_jwt_secret_change_me';
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    console.error('JWT_SECRET is not configured!');
+    return res.status(500).json({
+      error: 'Erro de configuração',
+      message: 'O servidor não está configurado corretamente.'
+    });
+  }
 
   jwt.verify(token, secret, (err, decoded) => {
     if (err) {

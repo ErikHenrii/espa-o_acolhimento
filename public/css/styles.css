@@ -596,3 +596,17 @@ body {
   width: 2rem;
   background: var(--teal-dark);
 }
+
+/* --------------------------------------------------------------------------
+   Credential Change Modal
+   -------------------------------------------------------------------------- */
+#credential-modal.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#credential-modal {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}

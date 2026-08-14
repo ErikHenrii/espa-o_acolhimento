@@ -93,12 +93,174 @@
   window.requireAuth = requireAuth;
 
   // ============================================================
+  // Credential Change Modal Logic
+  // ============================================================
+  var pendingRedirect = null;
+
+  function openCredentialModal(isForced, redirectAfter) {
+    var modal = document.getElementById('credential-modal');
+    if (!modal) return;
+
+    pendingRedirect = redirectAfter || null;
+
+    // If forced (first login), hide the close button and overlay click
+    var closeBtn = document.getElementById('cred-close');
+    var overlay = document.getElementById('credential-modal');
+    if (isForced) {
+      if (closeBtn) closeBtn.style.display = 'none';
+      modal.dataset.forced = 'true';
+      // Show warning banner
+      var warn = document.getElementById('cred-warning');
+      if (warn) warn.classList.remove('hidden');
+    } else {
+      if (closeBtn) closeBtn.style.display = '';
+      modal.dataset.forced = 'false';
+      var warn2 = document.getElementById('cred-warning');
+      if (warn2) warn2.classList.add('hidden');
+    }
+
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  window.openCredentialModal = openCredentialModal;
+
+  function closeCredentialModal() {
+    var modal = document.getElementById('credential-modal');
+    if (!modal) return;
+    if (modal.dataset.forced === 'true') return; // can't close if forced
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  window.closeCredentialModal = closeCredentialModal;
+
+  function handleCredentialSubmit() {
+    var submitBtn = document.getElementById('btn-update-credentials');
+    if (!submitBtn) return;
+
+    submitBtn.addEventListener('click', async function () {
+      var currentPass = document.getElementById('cred-current-password').value;
+      var newEmail = document.getElementById('cred-new-email').value.trim();
+      var newPass = document.getElementById('cred-new-password').value;
+      var confirmPass = document.getElementById('cred-confirm-password').value;
+
+      // Validation
+      if (!currentPass) {
+        showToast('Informe sua senha atual.', 'error');
+        return;
+      }
+
+      if (!newEmail && !newPass) {
+        showToast('Informe um novo e-mail ou nova senha para atualizar.', 'error');
+        return;
+      }
+
+      if (newPass && newPass.length < 6) {
+        showToast('A nova senha deve ter pelo menos 6 caracteres.', 'error');
+        return;
+      }
+
+      if (newPass && newPass !== confirmPass) {
+        showToast('A confirmação de senha não confere.', 'error');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Atualizando...';
+
+      try {
+        var token = localStorage.getItem('espaco_token');
+        var res = await fetch(API_BASE + '/auth/update-credentials', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({
+            current_password: currentPass,
+            new_email: newEmail || undefined,
+            new_password: newPass || undefined
+          })
+        });
+
+        if (res.ok) {
+          var data = await res.json();
+          // Update stored user and token
+          localStorage.setItem('espaco_token', data.token);
+          localStorage.setItem('espaco_user', JSON.stringify(data.user));
+
+          showToast('Credenciais atualizadas com sucesso!', 'success');
+
+          // Close modal
+          var modal = document.getElementById('credential-modal');
+          if (modal) {
+            modal.classList.remove('active');
+            modal.dataset.forced = 'false';
+          }
+          document.body.style.overflow = '';
+
+          // Clear form
+          document.getElementById('cred-current-password').value = '';
+          document.getElementById('cred-new-email').value = '';
+          document.getElementById('cred-new-password').value = '';
+          document.getElementById('cred-confirm-password').value = '';
+
+          // Redirect if pending
+          if (pendingRedirect) {
+            setTimeout(function () {
+              window.location.href = pendingRedirect;
+            }, 800);
+          }
+        } else {
+          var errorData = await res.json().catch(function () { return {}; });
+          throw new Error(errorData.message || 'Erro ao atualizar credenciais');
+        }
+      } catch (err) {
+        showToast(err.message || 'Erro ao atualizar credenciais. Tente novamente.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Atualizar Credenciais</span><i class="fa-solid fa-shield-halved text-xs"></i>';
+      }
+    });
+  }
+
+  // ============================================================
   // Login page initialization
   // ============================================================
   document.addEventListener('DOMContentLoaded', function () {
+    // Login page initialization
     if (document.getElementById('login-form')) {
-      // NO auto-redirect — login page always shows, even if session exists
       initAuthUI();
+    }
+    // Initialize credential modal handler on ANY page that has the modal
+    if (document.getElementById('credential-modal')) {
+      handleCredentialSubmit();
+      // Set up close button and overlay click
+      var closeBtn = document.getElementById('cred-close');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function () { closeCredentialModal(); });
+      }
+      var modal = document.getElementById('credential-modal');
+      if (modal) {
+        modal.addEventListener('click', function (e) {
+          if (e.target === modal && modal.dataset.forced !== 'true') {
+            closeCredentialModal();
+          }
+        });
+      }
+      // Check if user must change credentials (first login)
+      var userJson = localStorage.getItem('espaco_user');
+      if (userJson) {
+        try {
+          var user = JSON.parse(userJson);
+          if (user.must_change_credentials) {
+            setTimeout(function () {
+              openCredentialModal(true, null);
+            }, 500);
+          }
+        } catch (e) {}
+      }
     }
   });
 
@@ -198,7 +360,7 @@
         var res = await fetch(API_BASE + '/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email, password: password, role: currentRole })
+          body: JSON.stringify({ email: email, password: password })
         });
 
         if (res.ok) {
@@ -207,9 +369,25 @@
           localStorage.setItem('espaco_user', JSON.stringify(data.user));
 
           showToast('Login realizado com sucesso!', 'success');
-          setTimeout(function () {
-            window.location.href = currentRole === 'terapeuta' ? 'terapeuta.html' : 'paciente.html';
-          }, 600);
+
+          var targetPage = data.user.role === 'terapeuta' ? 'terapeuta.html' : 'paciente.html';
+
+          // Check if user must change credentials (first login for therapist)
+          if (data.user.must_change_credentials) {
+            setTimeout(function () {
+              // Redirect to the portal first, then the portal will show the modal
+              // Actually, redirect to the target page and open modal there
+              // We pass the flag via sessionStorage so the portal page knows to show it
+              try {
+                sessionStorage.setItem('espaco_must_change', '1');
+              } catch (e) {}
+              window.location.href = targetPage;
+            }, 600);
+          } else {
+            setTimeout(function () {
+              window.location.href = targetPage;
+            }, 600);
+          }
         } else {
           var errorData = await res.json().catch(function () { return {}; });
           throw new Error(errorData.message || 'Credenciais inválidas');

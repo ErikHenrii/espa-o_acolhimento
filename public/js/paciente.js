@@ -22,6 +22,19 @@ let sleepHours = 7.5;
 let sleepQuality = 'Excelente';
 let historyFilter = 'all';
 
+// ============================================================
+// XSS Sanitization helper
+// ============================================================
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // Affirmations List (Portuguese)
 const AFFIRMATIONS = [
   "Eu me permito acolher meus sentimentos sem julgamentos e no meu próprio tempo.",
@@ -47,7 +60,7 @@ function showToast(message, type = 'info') {
 
   toast.innerHTML = `
     <i class="fa-solid ${iconClass}"></i>
-    <span>${message}</span>
+    <span>${escapeHtml(message)}</span>
   `;
 
   container.appendChild(toast);
@@ -120,7 +133,7 @@ function formatPortugueseDate(dateStr) {
   const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-  return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} às ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} às ${String(date.getHours()).padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 }
 
 function formatFullDate(dateStr) {
@@ -133,7 +146,7 @@ function formatFullDate(dateStr) {
   return `${fullDays[date.getDay()]}, ${date.getDate()} de ${fullMonths[date.getMonth()]}`;
 }
 
-// Load Patient Initial Data
+// Load Patient Initial Data from API
 async function fetchPatientData() {
   try {
     const res = await fetch(`${API_BASE}/patient/data`, {
@@ -145,11 +158,17 @@ async function fetchPatientData() {
 
     if (res.ok) {
       const data = await res.json();
+      // API now returns { checkins, sleep, journals } with frontend-friendly field names
       patientData = {
         checkins: data.checkins || [],
         sleep: data.sleep || [],
         journals: data.journals || []
       };
+    } else if (res.status === 401) {
+      // Token expired — redirect to login
+      showToast('Sessão expirada. Faça login novamente.', 'error');
+      setTimeout(() => { if (window.logoutApp) window.logoutApp(); }, 1500);
+      return;
     } else {
       throw new Error('API request failed');
     }
@@ -163,7 +182,7 @@ async function fetchPatientData() {
   renderHomeStats();
 }
 
-// Local mock store generator for interactive demonstration
+// Local mock store generator for interactive demonstration (offline fallback)
 function loadMockData() {
   const savedData = localStorage.getItem(`espaco_patient_data_${currentUser.id}`);
   if (savedData) {
@@ -173,7 +192,6 @@ function loadMockData() {
     } catch(e){}
   }
 
-  // Initial seed data for fresh demo experience
   const now = new Date();
   patientData = {
     checkins: [
@@ -223,7 +241,6 @@ function renderHeader() {
     avatarEl.textContent = initials;
   }
 
-  // Journal current date label
   const journalDateEl = document.getElementById('journal-current-date');
   if (journalDateEl) {
     journalDateEl.textContent = formatFullDate(new Date().toISOString());
@@ -235,7 +252,6 @@ function renderDailyAffirmation() {
   const affEl = document.getElementById('daily-affirmation');
   if (!affEl) return;
 
-  // Pick affirmation based on day of year
   const start = new Date(new Date().getFullYear(), 0, 0);
   const diff = new Date() - start;
   const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -250,15 +266,12 @@ function renderHomeStats() {
   const moodAvgEl = document.getElementById('stat-mood-avg');
   const sleepAvgEl = document.getElementById('stat-sleep-avg');
 
-  // Calculate Streak
   let streak = 0;
   if (patientData.checkins.length > 0) {
-    // Count days
     streak = Math.min(patientData.checkins.length, 7);
   }
   if (streakEl) streakEl.textContent = `${streak} ${streak === 1 ? 'dia' : 'dias'}`;
 
-  // Calculate Mood Average
   if (patientData.checkins.length > 0) {
     const totalScore = patientData.checkins.reduce((acc, c) => acc + (Number(c.score) || 7), 0);
     const avg = (totalScore / patientData.checkins.length).toFixed(1);
@@ -267,7 +280,6 @@ function renderHomeStats() {
     if (moodAvgEl) moodAvgEl.textContent = '--';
   }
 
-  // Calculate Sleep Average
   if (patientData.sleep.length > 0) {
     const totalHours = patientData.sleep.reduce((acc, s) => acc + (Number(s.hours) || 7), 0);
     const avg = (totalHours / patientData.sleep.length).toFixed(1);
@@ -303,7 +315,6 @@ function renderMiniMoodChart() {
   const points = checkins.map((c, idx) => {
     const score = Number(c.score) || 5;
     const x = paddingX + (idx / Math.max(1, checkins.length - 1)) * (svgWidth - paddingX * 2);
-    // Score range 1 to 10
     const y = svgHeight - paddingY - ((score - 1) / 9) * (svgHeight - paddingY * 2);
     return { x, y, score, date: c.created_at };
   });
@@ -317,15 +328,12 @@ function renderMiniMoodChart() {
 
   container.innerHTML = `
     <svg viewBox="0 0 ${svgWidth} ${svgHeight}" class="w-full h-full overflow-visible">
-      <!-- Background Grid Lines -->
       <line x1="${paddingX}" y1="${paddingY}" x2="${svgWidth - paddingX}" y2="${paddingY}" stroke="#e8dfd8" stroke-dasharray="2,2" />
       <line x1="${paddingX}" y1="${svgHeight/2}" x2="${svgWidth - paddingX}" y2="${svgHeight/2}" stroke="#e8dfd8" stroke-dasharray="2,2" />
       <line x1="${paddingX}" y1="${svgHeight - paddingY}" x2="${svgWidth - paddingX}" y2="${svgHeight - paddingY}" stroke="#e8dfd8" stroke-dasharray="2,2" />
       
-      <!-- Polyline -->
       <polyline fill="none" stroke="#84a98c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${polylinePoints}" />
       
-      <!-- Dots & Values -->
       ${dotsHtml}
     </svg>
   `;
@@ -375,16 +383,20 @@ function initControls() {
     });
   });
 
-  // Save Check-in Action
+  // Save Check-in Action — sends correct field names to API
   const btnSaveCheckin = document.getElementById('btn-save-checkin');
   if (btnSaveCheckin) {
     btnSaveCheckin.addEventListener('click', async () => {
       const notes = document.getElementById('checkin-notes').value.trim();
+      const todayDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
       const newCheckin = {
         id: 'ck_' + Date.now(),
+        date: todayDate,
         mood: selectedMood,
-        score: selectedScore,
+        mood_emoji: '',
+        wellness_score: selectedScore,
+        score: selectedScore, // for local mock
         triggers: selectedTriggers,
         notes: notes,
         created_at: new Date().toISOString()
@@ -400,10 +412,20 @@ function initControls() {
             'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(newCheckin)
+          body: JSON.stringify({
+            date: todayDate,
+            mood: selectedMood,
+            wellness_score: selectedScore,
+            triggers: selectedTriggers,
+            notes: notes
+          })
         });
 
-        if (!res.ok) throw new Error('API save failed');
+        if (!res.ok && res.status === 401) {
+          showToast('Sessão expirada. Faça login novamente.', 'error');
+          setTimeout(() => { if (window.logoutApp) window.logoutApp(); }, 1500);
+          return;
+        }
       } catch (e) {
         console.warn('API offline, saving locally');
       }
@@ -447,11 +469,12 @@ function initControls() {
     });
   });
 
-  // Save Sleep Action
+  // Save Sleep Action — sends correct field names to API
   const btnSaveSleep = document.getElementById('btn-save-sleep');
   if (btnSaveSleep) {
     btnSaveSleep.addEventListener('click', async () => {
       const notes = document.getElementById('sleep-notes').value.trim();
+      const todayDate = new Date().toISOString().split('T')[0];
 
       const newSleep = {
         id: 'sl_' + Date.now(),
@@ -464,14 +487,25 @@ function initControls() {
       btnSaveSleep.disabled = true;
 
       try {
-        await fetch(`${API_BASE}/patient/sleep`, {
+        const res = await fetch(`${API_BASE}/patient/sleep`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(newSleep)
+          body: JSON.stringify({
+            date: todayDate,
+            sleep_hours: sleepHours,
+            sleep_quality: sleepQuality,
+            sleep_notes: notes
+          })
         });
+
+        if (!res.ok && res.status === 401) {
+          showToast('Sessão expirada. Faça login novamente.', 'error');
+          setTimeout(() => { if (window.logoutApp) window.logoutApp(); }, 1500);
+          return;
+        }
       } catch (e) {}
 
       patientData.sleep.unshift(newSleep);
@@ -504,7 +538,7 @@ function initControls() {
     });
   }
 
-  // Save Journal Action
+  // Save Journal Action — sends correct field names to API
   const btnSaveJournal = document.getElementById('btn-save-journal');
   if (btnSaveJournal) {
     btnSaveJournal.addEventListener('click', async () => {
@@ -515,6 +549,7 @@ function initControls() {
       }
 
       const isShared = privacyToggle ? privacyToggle.checked : true;
+      const todayDate = new Date().toISOString().split('T')[0];
 
       const newJournal = {
         id: 'jn_' + Date.now(),
@@ -526,14 +561,24 @@ function initControls() {
       btnSaveJournal.disabled = true;
 
       try {
-        await fetch(`${API_BASE}/patient/journal`, {
+        const res = await fetch(`${API_BASE}/patient/journal`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(newJournal)
+          body: JSON.stringify({
+            date: todayDate,
+            content: content,
+            privacy: isShared ? 'shared' : 'private'
+          })
         });
+
+        if (!res.ok && res.status === 401) {
+          showToast('Sessão expirada. Faça login novamente.', 'error');
+          setTimeout(() => { if (window.logoutApp) window.logoutApp(); }, 1500);
+          return;
+        }
       } catch (e) {}
 
       patientData.journals.unshift(newJournal);
@@ -587,7 +632,6 @@ function renderHistoryTimeline() {
     patientData.journals.forEach(j => combined.push({ type: 'journal', data: j, date: new Date(j.created_at) }));
   }
 
-  // Sort by date desc
   combined.sort((a, b) => b.date - a.date);
 
   if (combined.length === 0) {
@@ -608,7 +652,7 @@ function renderHistoryTimeline() {
       const c = item.data;
       const emojiMap = { 'Radiante': '😄', 'Bem': '🙂', 'Neutro': '😐', 'Cansado': '😔', 'Difícil': '😢' };
       const emoji = emojiMap[c.mood] || '🙂';
-      const triggersHtml = (c.triggers || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-linen text-[10px] font-semibold text-charcoal">${t}</span>`).join(' ');
+      const triggersHtml = (c.triggers || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-linen text-[10px] font-semibold text-charcoal">${escapeHtml(t)}</span>`).join(' ');
 
       return `
         <div class="p-4 rounded-2xl bg-white border border-linen shadow-sm relative overflow-hidden">
@@ -616,13 +660,13 @@ function renderHistoryTimeline() {
             <div class="flex items-center gap-2">
               <span class="text-xl">${emoji}</span>
               <div>
-                <span class="text-xs font-bold text-charcoal block">Check-in: ${c.mood}</span>
-                <span class="text-[10px] text-slate-400">${formatPortugueseDate(c.created_at)}</span>
+                <span class="text-xs font-bold text-charcoal block">Check-in: ${escapeHtml(c.mood)}</span>
+                <span class="text-[10px] text-slate-400">${escapeHtml(formatPortugueseDate(c.created_at))}</span>
               </div>
             </div>
-            <span class="px-2 py-1 rounded-xl bg-sage-light/50 text-sage-900 font-bold text-xs">Nota ${c.score}/10</span>
+            <span class="px-2 py-1 rounded-xl bg-sage-light/50 text-sage-900 font-bold text-xs">Nota ${escapeHtml(String(c.score))}/10</span>
           </div>
-          ${c.notes ? `<p class="text-xs text-slate-600 mb-2 italic">"${c.notes}"</p>` : ''}
+          ${c.notes ? `<p class="text-xs text-slate-600 mb-2 italic">"${escapeHtml(c.notes)}"</p>` : ''}
           ${triggersHtml ? `<div class="flex flex-wrap gap-1 mt-1">${triggersHtml}</div>` : ''}
         </div>
       `;
@@ -638,13 +682,13 @@ function renderHistoryTimeline() {
                 <i class="fa-solid fa-moon"></i>
               </div>
               <div>
-                <span class="text-xs font-bold text-charcoal block">Sono: ${s.hours} horas</span>
-                <span class="text-[10px] text-slate-400">${formatPortugueseDate(s.created_at)}</span>
+                <span class="text-xs font-bold text-charcoal block">Sono: ${escapeHtml(String(s.hours))} horas</span>
+                <span class="text-[10px] text-slate-400">${escapeHtml(formatPortugueseDate(s.created_at))}</span>
               </div>
             </div>
-            <span class="px-2.5 py-1 rounded-xl bg-lavender/30 text-charcoal font-bold text-xs">${s.quality}</span>
+            <span class="px-2.5 py-1 rounded-xl bg-lavender/30 text-charcoal font-bold text-xs">${escapeHtml(s.quality || '')}</span>
           </div>
-          ${s.notes ? `<p class="text-xs text-slate-600 italic">"${s.notes}"</p>` : ''}
+          ${s.notes ? `<p class="text-xs text-slate-600 italic">"${escapeHtml(s.notes)}"</p>` : ''}
         </div>
       `;
     }
@@ -660,14 +704,14 @@ function renderHistoryTimeline() {
               </div>
               <div>
                 <span class="text-xs font-bold text-charcoal block">Entrada no Diário</span>
-                <span class="text-[10px] text-slate-400">${formatPortugueseDate(j.created_at)}</span>
+                <span class="text-[10px] text-slate-400">${escapeHtml(formatPortugueseDate(j.created_at))}</span>
               </div>
             </div>
             <span class="px-2 py-0.5 rounded-full ${j.is_shared ? 'bg-sage-light text-sage-900' : 'bg-sand/30 text-clay'} text-[10px] font-bold">
               ${j.is_shared ? '<i class="fa-solid fa-user-check text-[9px]"></i> Compartilhado' : '<i class="fa-solid fa-lock text-[9px]"></i> Privado'}
             </span>
           </div>
-          <p class="text-xs text-charcoal leading-relaxed whitespace-pre-line">${j.content}</p>
+          <p class="text-xs text-charcoal leading-relaxed whitespace-pre-line">${escapeHtml(j.content)}</p>
         </div>
       `;
     }

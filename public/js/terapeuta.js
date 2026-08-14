@@ -18,6 +18,19 @@ let selectedPatientData = {
   journals: []
 };
 
+// ============================================================
+// XSS Sanitization helper
+// ============================================================
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // Toast Notification Helper
 function showToast(message, type = 'info') {
   const container = document.getElementById('toast-container');
@@ -32,7 +45,7 @@ function showToast(message, type = 'info') {
 
   toast.innerHTML = `
     <i class="fa-solid ${iconClass}"></i>
-    <span>${message}</span>
+    <span>${escapeHtml(message)}</span>
   `;
 
   container.appendChild(toast);
@@ -74,7 +87,7 @@ function formatPortugueseDate(dateStr) {
   if (isNaN(date)) return dateStr;
   
   const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()} às ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()} às ${String(date.getHours()).padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 }
 
 function formatDateShort(dateStr) {
@@ -83,7 +96,7 @@ function formatDateShort(dateStr) {
   return `${date.getDate()}/${date.getMonth() + 1}`;
 }
 
-// Fetch Patients List
+// Fetch Patients List from API
 async function fetchPatients() {
   try {
     const res = await fetch(`${API_BASE}/therapist/patients`, {
@@ -94,7 +107,13 @@ async function fetchPatients() {
     });
 
     if (res.ok) {
-      patientsList = await res.json();
+      const data = await res.json();
+      // API returns { patients: [...] } with avg_score and status per patient
+      patientsList = data.patients || [];
+    } else if (res.status === 401) {
+      showToast('Sessão expirada. Faça login novamente.', 'error');
+      setTimeout(() => { if (window.logoutApp) window.logoutApp(); }, 1500);
+      return;
     } else {
       throw new Error('API request failed');
     }
@@ -125,7 +144,7 @@ function loadMockPatients() {
       created_at: '2026-01-15T10:00:00.000Z',
       avg_score: 8.2,
       last_activity: new Date(now - 1000*60*60*2).toISOString(),
-      status: 'estavel' // green >= 7
+      status: 'estavel'
     },
     {
       id: 'p_102',
@@ -134,7 +153,7 @@ function loadMockPatients() {
       created_at: '2026-02-01T14:30:00.000Z',
       avg_score: 5.6,
       last_activity: new Date(now - 1000*60*60*14).toISOString(),
-      status: 'atencao' // amber 5-6
+      status: 'atencao'
     },
     {
       id: 'p_103',
@@ -143,7 +162,7 @@ function loadMockPatients() {
       created_at: '2026-03-10T09:15:00.000Z',
       avg_score: 4.1,
       last_activity: new Date(now - 1000*60*60*36).toISOString(),
-      status: 'critico' // red < 5
+      status: 'critico'
     },
     {
       id: 'p_104',
@@ -174,13 +193,12 @@ function renderPatientList(filterText = '') {
   container.innerHTML = filtered.map(p => {
     const isSelected = p.id === selectedPatientId;
     
-    // Status dot color
     let dotColorClass = 'bg-emerald-500';
     if (p.avg_score < 5) dotColorClass = 'bg-rose-500';
     else if (p.avg_score < 7) dotColorClass = 'bg-amber-500';
 
     return `
-      <div onclick="selectPatient('${p.id}')" 
+      <div onclick="selectPatient('${escapeHtml(p.id)}')" 
         class="p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
           isSelected 
             ? 'bg-teal-700 text-white border-teal-800 shadow-sm' 
@@ -189,13 +207,13 @@ function renderPatientList(filterText = '') {
         <div class="flex items-center gap-3">
           <div class="relative">
             <div class="w-9 h-9 rounded-xl ${isSelected ? 'bg-teal-600 text-amber-300' : 'bg-teal-100 text-teal-800'} font-bold text-sm flex items-center justify-center">
-              ${p.name.charAt(0)}
+              ${escapeHtml(p.name.charAt(0))}
             </div>
             <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${dotColorClass}"></span>
           </div>
           <div class="text-left">
-            <span class="block text-xs font-bold ${isSelected ? 'text-white' : 'text-teal-950'} line-clamp-1">${p.name}</span>
-            <span class="text-[10px] ${isSelected ? 'text-teal-200' : 'text-slate-400'}">Média: ${p.avg_score.toFixed(1)}/10</span>
+            <span class="block text-xs font-bold ${isSelected ? 'text-white' : 'text-teal-950'} line-clamp-1">${escapeHtml(p.name)}</span>
+            <span class="text-[10px] ${isSelected ? 'text-teal-200' : 'text-slate-400'}">Média: ${escapeHtml(p.avg_score.toFixed(1))}/10</span>
           </div>
         </div>
         <i class="fa-solid fa-chevron-right text-[10px] ${isSelected ? 'text-amber-300' : 'text-slate-300'}"></i>
@@ -210,7 +228,7 @@ function renderMobilePatientSelect() {
   if (!select) return;
 
   select.innerHTML = patientsList.map(p => `
-    <option value="${p.id}" ${p.id === selectedPatientId ? 'selected' : ''}>${p.name} (Média ${p.avg_score.toFixed(1)})</option>
+    <option value="${escapeHtml(p.id)}" ${p.id === selectedPatientId ? 'selected' : ''}>${escapeHtml(p.name)} (Média ${p.avg_score.toFixed(1)})</option>
   `).join('');
 }
 
@@ -229,7 +247,18 @@ async function selectPatient(patientId) {
     });
 
     if (res.ok) {
-      selectedPatientData = await res.json();
+      const data = await res.json();
+      // API returns { overview, checkins, sleep, journals } with frontend-friendly names
+      selectedPatientData = {
+        overview: data.overview || null,
+        checkins: data.checkins || [],
+        sleep: data.sleep || [],
+        journals: data.journals || []
+      };
+    } else if (res.status === 401) {
+      showToast('Sessão expirada. Faça login novamente.', 'error');
+      setTimeout(() => { if (window.logoutApp) window.logoutApp(); }, 1500);
+      return;
     } else {
       throw new Error('API fetch failed');
     }
@@ -253,7 +282,6 @@ function loadMockPatientHistory(patientId) {
   const patient = patientsList.find(p => p.id === patientId) || patientsList[0];
   const now = new Date();
 
-  // Generate 14 days of realistic mock checkins
   const mockCheckins = [];
   const mockSleep = [];
   const mockJournals = [];
@@ -379,8 +407,8 @@ function renderMoodChart() {
   const dots = points.map(p => `
     <g class="group">
       <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="#0f766e" stroke="#ffffff" stroke-width="2" class="cursor-pointer hover:r-6 transition-all" />
-      <text x="${p.x.toFixed(1)}" y="${(p.y - 8).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f766e">${p.score}</text>
-      <text x="${p.x.toFixed(1)}" y="${svgH - 4}" text-anchor="middle" font-size="8" fill="#64748b">${p.date}</text>
+      <text x="${p.x.toFixed(1)}" y="${(p.y - 8).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f766e">${escapeHtml(String(p.score))}</text>
+      <text x="${p.x.toFixed(1)}" y="${svgH - 4}" text-anchor="middle" font-size="8" fill="#64748b">${escapeHtml(p.date)}</text>
     </g>
   `).join('');
 
@@ -423,8 +451,8 @@ function renderSleepChart() {
     return `
       <g class="group">
         <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${barHeight.toFixed(1)}" rx="4" fill="#6366f1" opacity="0.8" class="hover:opacity-100 transition-all cursor-pointer"/>
-        <text x="${(x + barWidth/2).toFixed(1)}" y="${(y - 5).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="bold" fill="#4338ca">${d.hours}h</text>
-        <text x="${(x + barWidth/2).toFixed(1)}" y="${svgH - 4}" text-anchor="middle" font-size="8" fill="#64748b">${formatDateShort(d.created_at)}</text>
+        <text x="${(x + barWidth/2).toFixed(1)}" y="${(y - 5).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="bold" fill="#4338ca">${escapeHtml(String(d.hours))}h</text>
+        <text x="${(x + barWidth/2).toFixed(1)}" y="${svgH - 4}" text-anchor="middle" font-size="8" fill="#64748b">${escapeHtml(formatDateShort(d.created_at))}</text>
       </g>
     `;
   }).join('');
@@ -456,15 +484,15 @@ function renderRecentCheckins() {
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
           <span class="text-lg">${emojiMap[c.mood] || '🙂'}</span>
-          <span class="text-xs font-bold text-teal-950">${c.mood}</span>
+          <span class="text-xs font-bold text-teal-950">${escapeHtml(c.mood)}</span>
         </div>
-        <span class="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">Nota ${c.score}/10</span>
+        <span class="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">Nota ${escapeHtml(String(c.score))}/10</span>
       </div>
-      <p class="text-[11px] text-slate-400">${formatPortugueseDate(c.created_at)}</p>
-      ${c.notes ? `<p class="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg italic">"${c.notes}"</p>` : ''}
+      <p class="text-[11px] text-slate-400">${escapeHtml(formatPortugueseDate(c.created_at))}</p>
+      ${c.notes ? `<p class="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg italic">"${escapeHtml(c.notes)}"</p>` : ''}
       ${(c.triggers && c.triggers.length > 0) ? `
         <div class="flex flex-wrap gap-1 pt-1">
-          ${c.triggers.map(t => `<span class="px-1.5 py-0.5 rounded bg-teal-100 text-teal-900 text-[9px] font-semibold">${t}</span>`).join('')}
+          ${c.triggers.map(t => `<span class="px-1.5 py-0.5 rounded bg-teal-100 text-teal-900 text-[9px] font-semibold">${escapeHtml(t)}</span>`).join('')}
         </div>
       ` : ''}
     </div>
@@ -476,7 +504,7 @@ function renderSharedJournals() {
   const container = document.getElementById('therapist-journals-list');
   if (!container) return;
 
-  const shared = selectedPatientData.journals.filter(j => j.is_shared);
+  const shared = selectedPatientData.journals.filter(j => j.is_shared || j.privacy === 'shared');
 
   if (shared.length === 0) {
     container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">Nenhuma entrada compartilhada.</p>`;
@@ -486,12 +514,12 @@ function renderSharedJournals() {
   container.innerHTML = shared.map(j => `
     <div class="p-3 rounded-xl bg-white border border-amber-100 shadow-sm space-y-1.5">
       <div class="flex items-center justify-between">
-        <span class="text-[10px] font-semibold text-slate-400">${formatPortugueseDate(j.created_at)}</span>
+        <span class="text-[10px] font-semibold text-slate-400">${escapeHtml(formatPortugueseDate(j.created_at))}</span>
         <span class="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
           <i class="fa-solid fa-user-check"></i> Compartilhado
         </span>
       </div>
-      <p class="text-xs text-slate-700 leading-relaxed whitespace-pre-line">${j.content}</p>
+      <p class="text-xs text-slate-700 leading-relaxed whitespace-pre-line">${escapeHtml(j.content)}</p>
     </div>
   `).join('');
 }
@@ -509,11 +537,11 @@ function renderSleepRecords() {
   container.innerHTML = selectedPatientData.sleep.slice(0, 5).map(s => `
     <div class="p-3 rounded-xl bg-white border border-indigo-100 shadow-sm space-y-1">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-bold text-indigo-950">${s.hours} horas dormidas</span>
-        <span class="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">${s.quality}</span>
+        <span class="text-xs font-bold text-indigo-950">${escapeHtml(String(s.hours))} horas dormidas</span>
+        <span class="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">${escapeHtml(s.quality || '')}</span>
       </div>
-      <p class="text-[10px] text-slate-400">${formatPortugueseDate(s.created_at)}</p>
-      ${s.notes ? `<p class="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg italic">${s.notes}</p>` : ''}
+      <p class="text-[10px] text-slate-400">${escapeHtml(formatPortugueseDate(s.created_at))}</p>
+      ${s.notes ? `<p class="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg italic">${escapeHtml(s.notes)}</p>` : ''}
     </div>
   `).join('');
 }
@@ -523,7 +551,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (checkAuth()) {
     fetchPatients();
 
-    // Search filter input listener
     const searchInput = document.getElementById('patient-search-input');
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
@@ -531,7 +558,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Mobile select change listener
     const selectMobile = document.getElementById('patient-select-mobile');
     if (selectMobile) {
       selectMobile.addEventListener('change', (e) => {
@@ -541,7 +567,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Logout button
     const btnLogout = document.getElementById('btn-therapist-logout');
     if (btnLogout) {
       btnLogout.addEventListener('click', () => {

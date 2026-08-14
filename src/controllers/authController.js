@@ -3,33 +3,72 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { get, run } = require('../config/database');
 
+// ============================================================
+// Input sanitization helpers
+// ============================================================
+
 /**
- * Register a new patient
+ * Basic email validation (RFC 5322 simplified)
  */
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+/**
+ * Strip HTML tags and trim whitespace from string input
+ */
+function sanitizeString(str) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/<[^>]*>/g, '').trim();
+}
+
+/**
+ * Validate password strength
+ */
+function validatePassword(password) {
+  if (!password || typeof password !== 'string') return false;
+  if (password.length < 6) return false;
+  if (password.length > 128) return false;
+  return true;
+}
+
+// ============================================================
+// Register a new patient
+// ============================================================
 const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    let { name, email, password } = req.body;
 
-    if (!name || !email || !password) {
+    // Sanitize inputs
+    name = sanitizeString(name);
+    email = sanitizeString(email).toLowerCase();
+    password = typeof password === 'string' ? password.trim() : '';
+
+    if (!name || name.length < 2) {
       return res.status(400).json({
-        error: 'Dados incompletos',
-        message: 'Por favor, informe nome, e-mail e senha.'
+        error: 'Nome inválido',
+        message: 'Por favor, informe um nome válido com pelo menos 2 caracteres.'
       });
     }
 
-    if (password.length < 6) {
+    if (!isValidEmail(email)) {
       return res.status(400).json({
-        error: 'Senha muito curta',
+        error: 'E-mail inválido',
+        message: 'Por favor, informe um e-mail válido.'
+      });
+    }
+
+    if (!validatePassword(password)) {
+      return res.status(400).json({
+        error: 'Senha inválida',
         message: 'A senha deve ter pelo menos 6 caracteres.'
       });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-
     // Check if user already exists
     const existingUser = get(
       'SELECT id FROM users WHERE email = @email',
-      { email: normalizedEmail }
+      { email }
     );
 
     if (existingUser) {
@@ -46,20 +85,28 @@ const register = async (req, res) => {
     // Generate UUID
     const userId = crypto.randomUUID();
 
-    // Insert new patient
+    // Insert new patient (must_change_credentials = 0 for self-registered patients)
     run(
-      `INSERT INTO users (id, name, email, password_hash, role)
-       VALUES (@id, @name, @email, @passwordHash, @role)`,
-      { id: userId, name: name.trim(), email: normalizedEmail, passwordHash, role: 'paciente' }
+      `INSERT INTO users (id, name, email, password_hash, role, must_change_credentials)
+       VALUES (@id, @name, @email, @passwordHash, @role, @mustChange)`,
+      { id: userId, name, email, passwordHash, role: 'paciente', mustChange: 0 }
     );
 
     const newUser = get(
-      'SELECT id, name, email, role, created_at FROM users WHERE id = @id',
+      'SELECT id, name, email, role, must_change_credentials, created_at FROM users WHERE id = @id',
       { id: userId }
     );
 
     // Generate JWT Token
-    const jwtSecret = process.env.JWT_SECRET || 'default_jwt_secret_change_me';
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('JWT_SECRET is not configured!');
+      return res.status(500).json({
+        error: 'Erro de configuração',
+        message: 'O servidor não está configurado corretamente.'
+      });
+    }
+
     const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '7d';
 
     const token = jwt.sign(
@@ -75,7 +122,14 @@ const register = async (req, res) => {
 
     return res.status(201).json({
       message: 'Cadastro realizado com sucesso!',
-      user: newUser,
+      user: {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        must_change_credentials: newUser.must_change_credentials === 1,
+        created_at: newUser.created_at
+      },
       token
     });
   } catch (error) {
@@ -87,12 +141,16 @@ const register = async (req, res) => {
   }
 };
 
-/**
- * Login user (patient or therapist)
- */
+// ============================================================
+// Login user (patient or therapist)
+// ============================================================
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+
+    // Sanitize inputs
+    email = sanitizeString(email).toLowerCase();
+    password = typeof password === 'string' ? password : '';
 
     if (!email || !password) {
       return res.status(400).json({
@@ -101,12 +159,10 @@ const login = async (req, res) => {
       });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-
     // Find user
     const user = get(
-      'SELECT id, name, email, password_hash, role, created_at FROM users WHERE email = @email',
-      { email: normalizedEmail }
+      'SELECT id, name, email, password_hash, role, must_change_credentials, created_at FROM users WHERE email = @email',
+      { email }
     );
 
     if (!user) {
@@ -126,7 +182,15 @@ const login = async (req, res) => {
     }
 
     // Generate token
-    const jwtSecret = process.env.JWT_SECRET || 'default_jwt_secret_change_me';
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('JWT_SECRET is not configured!');
+      return res.status(500).json({
+        error: 'Erro de configuração',
+        message: 'O servidor não está configurado corretamente.'
+      });
+    }
+
     const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '7d';
 
     const token = jwt.sign(
@@ -147,6 +211,7 @@ const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        must_change_credentials: user.must_change_credentials === 1,
         created_at: user.created_at
       },
       token
@@ -160,7 +225,150 @@ const login = async (req, res) => {
   }
 };
 
+// ============================================================
+// Update credentials (email and/or password)
+// ============================================================
+const updateCredentials = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    let { current_password, new_email, new_password } = req.body;
+
+    // Sanitize
+    current_password = typeof current_password === 'string' ? current_password : '';
+    new_email = new_email ? sanitizeString(new_email).toLowerCase() : null;
+    new_password = typeof new_password === 'string' ? new_password.trim() : '';
+
+    // At least one field must be provided
+    if (!new_email && !new_password) {
+      return res.status(400).json({
+        error: 'Dados incompletos',
+        message: 'Informe o novo e-mail ou a nova senha para atualizar.'
+      });
+    }
+
+    // Fetch current user with password hash
+    const user = get(
+      'SELECT id, email, password_hash FROM users WHERE id = @id',
+      { id: userId }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Usuário não encontrado',
+        message: 'Conta não localizada.'
+      });
+    }
+
+    // Validate current password
+    const isCurrentValid = await bcrypt.compare(current_password, user.password_hash);
+    if (!isCurrentValid) {
+      return res.status(401).json({
+        error: 'Senha atual incorreta',
+        message: 'A senha atual informada não confere.'
+      });
+    }
+
+    let updates = [];
+    let params = { id: userId };
+
+    // Handle email update
+    if (new_email) {
+      if (!isValidEmail(new_email)) {
+        return res.status(400).json({
+          error: 'E-mail inválido',
+          message: 'O novo e-mail informado não é válido.'
+        });
+      }
+
+      // Check for duplicate email (excluding current user)
+      if (new_email !== user.email) {
+        const emailTaken = get(
+          'SELECT id FROM users WHERE email = @email AND id != @id',
+          { email: new_email, id: userId }
+        );
+
+        if (emailTaken) {
+          return res.status(400).json({
+            error: 'E-mail em uso',
+            message: 'Este e-mail já está cadastrado por outra conta.'
+          });
+        }
+
+        updates.push('email = @newEmail');
+        params.newEmail = new_email;
+      }
+    }
+
+    // Handle password update
+    if (new_password) {
+      if (!validatePassword(new_password)) {
+        return res.status(400).json({
+          error: 'Senha inválida',
+          message: 'A nova senha deve ter pelo menos 6 caracteres.'
+        });
+      }
+
+      const newHash = await bcrypt.hash(new_password, 10);
+      updates.push('password_hash = @newHash');
+      params.newHash = newHash;
+    }
+
+    // Always clear the must_change_credentials flag
+    updates.push('must_change_credentials = 0');
+
+    if (updates.length > 1) { // more than just the flag
+      run(
+        `UPDATE users SET ${updates.join(', ')} WHERE id = @id`,
+        params
+      );
+    } else {
+      // Only the flag update
+      run('UPDATE users SET must_change_credentials = 0 WHERE id = @id', { id: userId });
+    }
+
+    // Fetch updated user
+    const updatedUser = get(
+      'SELECT id, name, email, role, must_change_credentials, created_at FROM users WHERE id = @id',
+      { id: userId }
+    );
+
+    // Generate a new token (since email may have changed)
+    const jwtSecret = process.env.JWT_SECRET;
+    const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '7d';
+    const token = jwt.sign(
+      {
+        id: updatedUser.id,
+        role: updatedUser.role,
+        name: updatedUser.name,
+        email: updatedUser.email
+      },
+      jwtSecret,
+      { expiresIn: jwtExpiresIn }
+    );
+
+    return res.status(200).json({
+      message: 'Credenciais atualizadas com sucesso!',
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        must_change_credentials: updatedUser.must_change_credentials === 1,
+        created_at: updatedUser.created_at
+      },
+      token
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar credenciais:', error);
+    return res.status(500).json({
+      error: 'Erro interno',
+      message: 'Não foi possível atualizar as credenciais. Tente novamente.'
+    });
+  }
+};
+
 module.exports = {
   register,
-  login
+  login,
+  updateCredentials
 };

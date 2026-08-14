@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('paciente', 'terapeuta')),
+    must_change_credentials INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -23,6 +24,7 @@ CREATE TABLE IF NOT EXISTS checkins (
     mood_emoji TEXT,
     wellness_score INTEGER CHECK (wellness_score BETWEEN 1 AND 10),
     triggers TEXT DEFAULT '[]',
+    notes TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -37,7 +39,7 @@ CREATE TABLE IF NOT EXISTS sleep_records (
     date TEXT NOT NULL,
     sleep_hours REAL NOT NULL CHECK (sleep_hours >= 0 AND sleep_hours <= 24),
     sleep_quality TEXT,
-    sleep_notes TEXT,
+    sleep_notes TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -62,9 +64,10 @@ CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(date DESC
 CREATE INDEX IF NOT EXISTS idx_journal_entries_privacy ON journal_entries(privacy);
 
 -- ===========================================================
--- THERAPIST SEED (auto-created on startup, no manual SQL needed)
+-- THERAPIST SEED (auto-created on startup via seed.js)
 -- Default credentials:
 --   Email: jaqueline@espacoacolhimento.com.br
 --   Password: jac123456
 -- Change via env vars: THERAPIST_EMAIL, THERAPIST_PASSWORD
+-- On first login, must_change_credentials=1 forces a password/email change.
 -- ===========================================================

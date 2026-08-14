@@ -5,12 +5,22 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
       - key: JWT_SECRET
         generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
       - key: THERAPIST_EMAIL
         value: jaqueline@espacoacolhimento.com.br
       - key: THERAPIST_PASSWORD
         value: jac123456
+      - key: THERAPIST_NAME
+        value: Jaqueline Camila
+      - key: CORS_ORIGINS
+        # Leave empty or omit to allow all origins (needed for Render Free
+        # since the URL changes on each deploy). Set to your custom domain(s)
+        # separated by commas when you have a fixed frontend URL.
+        value: ""

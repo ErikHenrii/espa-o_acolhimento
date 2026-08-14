@@ -1,7 +1,17 @@
 const { all, get } = require('../config/database');
 
+// ============================================================
+// Input sanitization helper
+// ============================================================
+
+function sanitizeString(str) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/<[^>]*>/g, '').trim();
+}
+
 /**
  * List all registered patients
+ * Returns: { patients: [...] } with frontend-friendly field names including avg_score
  */
 const getPatients = async (req, res) => {
   try {
@@ -13,8 +23,38 @@ const getPatients = async (req, res) => {
       {}
     );
 
+    // Compute avg wellness score for each patient from their checkins
+    const patientsWithStats = patients.map(p => {
+      const checkinData = all(
+        `SELECT wellness_score FROM checkins WHERE patient_id = @patientId ORDER BY created_at DESC LIMIT 30`,
+        { patientId: p.id }
+      );
+
+      const scores = checkinData.map(c => c.wellness_score).filter(s => s != null);
+      const avgScore = scores.length > 0
+        ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
+        : 0;
+
+      const lastActivity = all(
+        `SELECT created_at FROM checkins WHERE patient_id = @patientId ORDER BY created_at DESC LIMIT 1`,
+        { patientId: p.id }
+      );
+
+      let status = 'sem_dados';
+      if (avgScore >= 7) status = 'estavel';
+      else if (avgScore >= 5) status = 'atencao';
+      else if (avgScore > 0) status = 'critico';
+
+      return {
+        ...p,
+        avg_score: avgScore,
+        last_activity: lastActivity.length > 0 ? lastActivity[0].created_at : p.created_at,
+        status
+      };
+    });
+
     return res.status(200).json({
-      patients
+      patients: patientsWithStats
     });
   } catch (error) {
     console.error('Erro ao listar pacientes:', error);
@@ -27,6 +67,7 @@ const getPatients = async (req, res) => {
 
 /**
  * Get detailed history of a specific patient (only shared journal entries)
+ * Returns data in frontend-friendly format with 'overview', 'checkins', 'sleep', 'journals'
  */
 const getPatientHistory = async (req, res) => {
   try {
@@ -48,7 +89,7 @@ const getPatientHistory = async (req, res) => {
     }
 
     const checkins = all(
-      `SELECT id, patient_id, date, mood, mood_emoji, wellness_score, triggers, created_at
+      `SELECT id, patient_id, date, mood, mood_emoji, wellness_score, triggers, notes, created_at
        FROM checkins WHERE patient_id = @id
        ORDER BY date DESC, created_at DESC`,
       { id }
@@ -68,16 +109,66 @@ const getPatientHistory = async (req, res) => {
       { id }
     );
 
-    // Parse triggers from JSON string
-    checkins.forEach(c => {
-      try { c.triggers = JSON.parse(c.triggers || '[]'); } catch { c.triggers = []; }
+    // Compute avg score for overview
+    const scores = checkins.map(c => c.wellness_score).filter(s => s != null);
+    const avgScore = scores.length > 0
+      ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
+      : 0;
+
+    let status = 'sem_dados';
+    if (avgScore >= 7) status = 'estavel';
+    else if (avgScore >= 5) status = 'atencao';
+    else if (avgScore > 0) status = 'critico';
+
+    // Map to frontend-friendly format
+    const checkinsMapped = checkins.map(c => {
+      let triggers = [];
+      try { triggers = JSON.parse(c.triggers || '[]'); } catch { triggers = []; }
+      return {
+        id: c.id,
+        patient_id: c.patient_id,
+        date: c.date,
+        mood: c.mood,
+        mood_emoji: c.mood_emoji,
+        score: c.wellness_score,
+        triggers: triggers,
+        notes: c.notes || '',
+        created_at: c.created_at
+      };
     });
 
+    const sleepMapped = sleepRecords.map(s => ({
+      id: s.id,
+      patient_id: s.patient_id,
+      date: s.date,
+      hours: s.sleep_hours,
+      quality: s.sleep_quality,
+      notes: s.sleep_notes || '',
+      created_at: s.created_at
+    }));
+
+    const journalsMapped = journalEntries.map(j => ({
+      id: j.id,
+      patient_id: j.patient_id,
+      date: j.date,
+      content: j.content,
+      is_shared: j.privacy === 'shared',
+      privacy: j.privacy,
+      audio_url: j.audio_url,
+      created_at: j.created_at
+    }));
+
+    const overview = {
+      ...patient,
+      avg_score: avgScore,
+      status
+    };
+
     return res.status(200).json({
-      patient,
-      checkins,
-      sleep_records: sleepRecords,
-      journal_entries: journalEntries
+      overview,
+      checkins: checkinsMapped,
+      sleep: sleepMapped,
+      journals: journalsMapped
     });
   } catch (error) {
     console.error('Erro ao buscar histórico do paciente:', error);

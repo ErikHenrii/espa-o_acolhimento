@@ -8,6 +8,18 @@ const DB_PATH = path.join(DB_DIR, 'espaco_acolhimento.db');
 let db;
 
 /**
+ * Run a migration safely (SQLite has no IF NOT EXISTS for ADD COLUMN)
+ */
+function safeAddColumn(table, columnDef) {
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${columnDef};`);
+    console.log(`Migration: added column ${columnDef.split(' ')[0]} to ${table}`);
+  } catch (e) {
+    // Column already exists — expected, ignore
+  }
+}
+
+/**
  * Initialize SQLite database and create tables if they don't exist
  */
 function initDatabase() {
@@ -28,6 +40,7 @@ function initDatabase() {
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL CHECK (role IN ('paciente', 'terapeuta')),
+      must_change_credentials INTEGER NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -42,6 +55,7 @@ function initDatabase() {
       mood_emoji TEXT,
       wellness_score INTEGER CHECK (wellness_score BETWEEN 1 AND 10),
       triggers TEXT DEFAULT '[]',
+      notes TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE
     );
@@ -55,7 +69,7 @@ function initDatabase() {
       date TEXT NOT NULL,
       sleep_hours REAL NOT NULL CHECK (sleep_hours >= 0 AND sleep_hours <= 24),
       sleep_quality TEXT,
-      sleep_notes TEXT,
+      sleep_notes TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE
     );
@@ -79,6 +93,10 @@ function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_journal_entries_privacy ON journal_entries(privacy);
   `);
 
+  // --- Migrations for existing databases ---
+  safeAddColumn('users', 'must_change_credentials INTEGER NOT NULL DEFAULT 0');
+  safeAddColumn('checkins', "notes TEXT DEFAULT ''");
+
   console.log('SQLite database initialized at:', DB_PATH);
   return db;
 }
@@ -95,19 +113,13 @@ function getDb() {
 
 /**
  * Execute a query that returns rows (SELECT)
- * @param {string} sql
- * @param {object} params - named parameters { param1: value1, ... }
- * @returns {Array} rows
  */
 function all(sql, params = {}) {
   return getDb().prepare(sql).all(params);
 }
 
 /**
- * Execute a query that returns a single row (SELECT ... LIMIT 1)
- * @param {string} sql
- * @param {object} params
- * @returns {object|undefined} row
+ * Execute a query that returns a single row
  */
 function get(sql, params = {}) {
   return getDb().prepare(sql).get(params);
@@ -115,9 +127,6 @@ function get(sql, params = {}) {
 
 /**
  * Execute an INSERT/UPDATE/DELETE and return info
- * @param {string} sql
- * @param {object} params
- * @returns {object} { lastInsertRowid, changes }
  */
 function run(sql, params = {}) {
   return getDb().prepare(sql).run(params);
