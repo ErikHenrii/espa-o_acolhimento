@@ -50,18 +50,18 @@ function checkAuth() {
   const userJson = localStorage.getItem('espaco_user');
 
   if (!authToken || !userJson) {
-    window.location.href = 'index.html';
+    window.location.href = 'acesso.html';
     return false;
   }
 
   try {
     currentUser = JSON.parse(userJson);
     if (currentUser.role !== 'terapeuta') {
-      window.location.href = currentUser.role === 'paciente' ? 'paciente.html' : 'index.html';
+      window.location.href = currentUser.role === 'paciente' ? 'paciente.html' : 'acesso.html';
       return false;
     }
   } catch (e) {
-    window.location.href = 'index.html';
+    window.location.href = 'acesso.html';
     return false;
   }
 

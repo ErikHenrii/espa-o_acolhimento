@@ -43,9 +43,9 @@ function checkExistingSession() {
   if (token && userJson) {
     try {
       const user = JSON.parse(userJson);
-      if (user.role === 'terapeuta' && !window.location.pathname.endsWith('terapeuta.html')) {
+      if (user.role === 'terapeuta') {
         window.location.href = 'terapeuta.html';
-      } else if (user.role === 'paciente' && !window.location.pathname.endsWith('paciente.html')) {
+      } else if (user.role === 'paciente') {
         window.location.href = 'paciente.html';
       }
     } catch (e) {
@@ -190,13 +190,8 @@ function initAuthUI() {
 
       if (res.ok) {
         const data = await res.json();
-        localStorage.setItem('espaco_token', data.token || 'mock_jwt_token_xyz');
-        localStorage.setItem('espaco_user', JSON.stringify(data.user || {
-          id: 'usr_1',
-          name: email.split('@')[0],
-          email: email,
-          role: currentRole
-        }));
+        localStorage.setItem('espaco_token', data.token);
+        localStorage.setItem('espaco_user', JSON.stringify(data.user));
 
         showToast('Login realizado com sucesso!', 'success');
         setTimeout(() => {
@@ -207,24 +202,7 @@ function initAuthUI() {
         throw new Error(errorData.message || 'Credenciais inválidas');
       }
     } catch (err) {
-      console.warn('API authentication unavailable or failed, using demo session:', err.message);
-      
-      // Standalone demo fallback session for seamless local testing
-      const demoUser = {
-        id: currentRole === 'terapeuta' ? 'therapist_1' : 'paciente_1',
-        name: currentRole === 'terapeuta' ? 'Jaqueline Camila' : (email.split('@')[0] || 'Maria Silva'),
-        email: email,
-        role: currentRole,
-        created_at: new Date().toISOString()
-      };
-
-      localStorage.setItem('espaco_token', 'demo_token_' + Date.now());
-      localStorage.setItem('espaco_user', JSON.stringify(demoUser));
-
-      showToast('Bem-vindo(a) ao Espaço de Acolhimento!', 'success');
-      setTimeout(() => {
-        window.location.href = currentRole === 'terapeuta' ? 'terapeuta.html' : 'paciente.html';
-      }, 700);
+      showToast(err.message || 'Erro ao fazer login. Tente novamente.', 'error');
     } finally {
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<span>Entrar no Portal</span><i class="fa-solid fa-arrow-right text-xs"></i>';
@@ -262,56 +240,27 @@ function initAuthUI() {
       const res = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role: 'paciente' })
+        body: JSON.stringify({ name, email, password })
       });
 
       if (res.ok) {
         const data = await res.json();
-        localStorage.setItem('espaco_token', data.token || 'mock_jwt_token_new');
-        localStorage.setItem('espaco_user', JSON.stringify(data.user || {
-          id: 'usr_' + Date.now(),
-          name,
-          email,
-          role: 'paciente'
-        }));
+        localStorage.setItem('espaco_token', data.token);
+        localStorage.setItem('espaco_user', JSON.stringify(data.user));
 
-        showToast('Conta criada com sucesso!', 'success');
+        showToast('Conta criada com sucesso! Bem-vindo(a)!', 'success');
         setTimeout(() => {
           window.location.href = 'paciente.html';
-        }, 600);
+        }, 700);
       } else {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Erro ao criar conta');
+        throw new Error(errorData.message || 'Erro ao cadastrar');
       }
     } catch (err) {
-      console.warn('API registration offline, using local fallback:', err.message);
-
-      const demoUser = {
-        id: 'paciente_' + Date.now(),
-        name: name,
-        email: email,
-        role: 'paciente',
-        created_at: new Date().toISOString()
-      };
-
-      localStorage.setItem('espaco_token', 'demo_token_' + Date.now());
-      localStorage.setItem('espaco_user', JSON.stringify(demoUser));
-
-      showToast('Conta criada com sucesso! Bem-vindo(a).', 'success');
-      setTimeout(() => {
-        window.location.href = 'paciente.html';
-      }, 700);
+      showToast(err.message || 'Erro ao cadastrar. Tente novamente.', 'error');
     } finally {
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<span>Criar Minha Conta</span><i class="fa-solid fa-heart text-xs"></i>';
     }
   });
-
-  // Google decorative login link handler
-  const googleBtn = document.getElementById('btn-google-login');
-  if (googleBtn) {
-    googleBtn.addEventListener('click', () => {
-      showToast('Login social com Google estará disponível em breve!', 'info');
-    });
-  }
 }

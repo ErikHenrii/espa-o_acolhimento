@@ -1,200 +1,522 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Espaço de Acolhimento - Jaqueline Camila | Portal de Acesso</title>
-  
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            'teal-dark': '#0f766e',
-            'teal-medium': '#14b8a6',
-            'teal-light': '#2dd4bf',
-            'amber-gold': '#ca8a04',
-            'amber-soft': '#fef08a',
-            'bg-neu': '#e0f2f1',
-          }
-        }
-      }
-    }
-  </script>
-  
-  <!-- Font Awesome CDN -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="css/styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jaqueline Camila - Terapeuta TRG e Analista Comportamental</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- ============================================================ -->
+    <!-- ESTILOS MODERNIZADOS: Squircle + Neumorfismo + Glassmorphism -->
+    <!-- ============================================================ -->
+    <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="min-h-screen bg-gradient-to-br from-teal-900 via-teal-800 to-amber-900 flex flex-col justify-between items-center p-4 relative overflow-x-hidden font-sans">
+<body class="section-neu-bg">
 
-  <!-- Background Animated Decorative Blobs -->
-  <div class="absolute top-10 left-10 w-72 h-72 bg-teal-400 opacity-20 rounded-full filter blur-3xl animate-float pointer-events-none"></div>
-  <div class="absolute bottom-10 right-10 w-96 h-96 bg-amber-500 opacity-20 rounded-full filter blur-3xl animate-float pointer-events-none" style="animation-delay: -3s;"></div>
-  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-teal-300 opacity-15 rounded-full filter blur-2xl animate-pulse-glow pointer-events-none"></div>
+    <!-- Header/Navigation — GLASSMORPHISM -->
+    <nav class="fixed w-full z-50 glass-nav">
+        <div class="max-w-6xl mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                    <div class="logo-squircle">
+                        <img src="https://cdn.abacus.ai/images/5739d25a-e882-4d98-9717-976fce79368e.png" alt="Terapeuta Jaqueline Camila" class="h-14 md:h-18">
+                    </div>
+                </div>
+                
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex space-x-4">
+                    <a href="#home" style="color: #0f766e" class="hover-menu cursor-pointer transition font-semibold">Início</a>
+                    <a href="#sobre" style="color: #0f766e" class="hover-menu cursor-pointer transition font-semibold">Sobre</a>
+                    <a href="#servicos" style="color: #0f766e" class="hover-menu cursor-pointer transition font-semibold">Serviços</a>
+                    <a href="#transtornos" style="color: #0f766e" class="hover-menu cursor-pointer transition font-semibold">Transtornos Emocionais</a>
+                    <a href="#depoimentos" style="color: #0f766e" class="hover-menu cursor-pointer transition font-semibold">Depoimentos</a>
+                    <a href="#contato" style="color: #0f766e" class="hover-menu cursor-pointer transition font-semibold">Contato</a>
+                    <a href="acesso.html" class="btn-squircle-glass px-5 py-2.5 cursor-pointer transition font-semibold text-sm whitespace-nowrap" style="color: #0f766e;">
+                        <i class="fas fa-heart mr-1.5"></i>Portal do Paciente
+                    </a>
+                </div>
 
-  <!-- Toast Notification Container -->
-  <div id="toast-container"></div>
-
-  <!-- Header / Brand Logo -->
-  <header class="w-full max-w-md pt-6 text-center z-10">
-    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 mb-3 shadow-lg text-amber-300">
-      <i class="fa-solid fa-spa text-3xl"></i>
-    </div>
-    <h1 class="text-2xl md:text-3xl font-bold text-white tracking-wide">Espaço de Acolhimento</h1>
-    <p class="text-teal-200 text-sm font-medium mt-1">Jaqueline Camila • Psicologia & Psicoterapia</p>
-  </header>
-
-  <!-- Main Auth Card Container -->
-  <main class="w-full max-w-[420px] my-auto py-6 z-10">
-    <div class="glass border border-white/30 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden backdrop-blur-xl">
-      
-      <!-- Profile Role Switcher (Sou Paciente / Sou Terapeuta) -->
-      <div class="bg-teal-950/20 p-1.5 rounded-2xl flex items-center mb-6 border border-white/10">
-        <button id="role-paciente-btn" type="button" class="flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 bg-white text-teal-900 shadow-md">
-          <i class="fa-solid fa-user-heart mr-1.5 text-teal-600"></i> Sou Paciente
-        </button>
-        <button id="role-terapeuta-btn" type="button" class="flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 text-teal-100 hover:text-white">
-          <i class="fa-solid fa-user-doctor mr-1.5 text-amber-300"></i> Sou Terapeuta
-        </button>
-      </div>
-
-      <!-- Auth Tabs (Entrar / Cadastrar) - Only active for Paciente -->
-      <div id="auth-tabs" class="flex border-b border-teal-700/20 mb-6">
-        <button id="tab-login" type="button" class="flex-1 pb-3 text-center text-sm font-bold text-teal-900 border-b-2 border-amber-500 transition-all duration-200">
-          Entrar
-        </button>
-        <button id="tab-register" type="button" class="flex-1 pb-3 text-center text-sm font-medium text-slate-500 border-b-2 border-transparent hover:text-teal-800 transition-all duration-200">
-          Cadastrar
-        </button>
-      </div>
-
-      <!-- LOGIN FORM -->
-      <form id="login-form" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-teal-950 uppercase tracking-wider mb-1.5">E-mail</label>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-600">
-              <i class="fa-solid fa-envelope"></i>
+                <!-- Mobile Menu Button — SQUIRCLE + NEU -->
+                <button style="color: #0f766e" class="md:hidden icon-squircle-neu-sm" id="menuBtn">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
             </div>
-            <input type="email" id="login-email" required placeholder="seu@email.com" 
-              class="w-full pl-10 pr-4 py-3 rounded-xl bg-teal-50/50 border border-teal-200/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm text-slate-800 transition-all">
-          </div>
+
+            <!-- Mobile Menu — GLASS -->
+            <div class="md:hidden mt-4 pb-4 space-y-2 hidden glass squircle-sm p-4" id="mobileMenu">
+                <a href="#home" style="color: #0f766e" class="block hover-menu cursor-pointer font-semibold">Início</a>
+                <a href="#sobre" style="color: #0f766e" class="block hover-menu cursor-pointer font-semibold">Sobre</a>
+                <a href="#servicos" style="color: #0f766e" class="block hover-menu cursor-pointer font-semibold">Serviços</a>
+                <a href="#transtornos" style="color: #0f766e" class="block hover-menu cursor-pointer font-semibold">Transtornos Emocionais</a>
+                <a href="#depoimentos" style="color: #0f766e" class="block hover-menu cursor-pointer font-semibold">Depoimentos</a>
+                <a href="#contato" style="color: #0f766e" class="block hover-menu cursor-pointer font-semibold">Contato</a>
+                <a href="acesso.html" class="block btn-squircle-glass px-4 py-2.5 cursor-pointer transition font-semibold text-sm text-center" style="color: #0f766e;">
+                    <i class="fas fa-heart mr-1.5"></i>Portal do Paciente
+                </a>
+            </div>
         </div>
+    </nav>
 
-        <div>
-          <label class="block text-xs font-semibold text-teal-950 uppercase tracking-wider mb-1.5">Senha</label>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-600">
-              <i class="fa-solid fa-lock"></i>
+    <!-- Hero Section — GLASS + NEU elements -->
+    <section id="home" class="pt-32 pb-16 px-4" style="background: linear-gradient(135deg, rgba(178,223,219,0.9) 0%, rgba(128,203,196,0.85) 100%);">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex flex-col md:flex-row items-center gap-8">
+                <div class="flex-1 text-center md:text-left">
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-teal-900 mb-6">
+                        Cuide da sua Saúde Mental
+                    </h1>
+                    <p class="text-lg md:text-xl text-teal-800 mb-8 leading-relaxed">
+                        Atendimento terapêutico humanizado e acolhedor, integrando fé e ciência para você encontrar equilíbrio, paz e propósito.
+                    </p>
+                    <a href="https://wa.me/5531982227168?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta." 
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="inline-block btn-squircle-glass px-8 py-4 text-lg font-semibold">
+                        <i class="fab fa-whatsapp mr-2"></i>
+                        Agende sua Consulta
+                    </a>
+                </div>
+                <div class="flex-1">
+                    <img src="https://cdn.abacus.ai/images/7f5d0d58-95e5-4cbd-9740-e671cb084395.png" alt="Jaqueline Camila - Terapeuta" class="img-squircle-neu w-full object-cover" style="max-height: 500px">
+                </div>
             </div>
-            <input type="password" id="login-password" required placeholder="••••••••" 
-              class="w-full pl-10 pr-10 py-3 rounded-xl bg-teal-50/50 border border-teal-200/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm text-slate-800 transition-all">
-            <button type="button" id="toggle-login-password" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-teal-700">
-              <i class="fa-solid fa-eye"></i>
+        </div>
+    </section>
+
+    <!-- Sobre Section — NEU + GLASS cards -->
+    <section id="sobre" class="py-16 px-4 section-sobre-bg">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold text-center text-teal-900 mb-12">Quem sou eu</h2>
+            <div class="flex flex-col md:flex-row items-center gap-8">
+                <div class="flex-1">
+                    <img src="https://cdn.abacus.ai/images/92a1bf1a-a8aa-4c10-872b-6e1cf0140db1.png" alt="Jaqueline Camila" class="img-squircle-neu w-full object-cover object-top" style="max-height: 700px">
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-2xl font-semibold text-yellow-700 mb-4">Jaqueline Camila — Terapeuta TRG e Analista Comportamental</h3>
+                    <p class="text-gray-700 mb-4 leading-relaxed">
+                        Sou Jaqueline Camila, casada com Erik Henrique, mãe da Júlia Camila e do Miguel Henrique. Cristã e pregadora da Palavra, capelã, terapeuta TRG e analista comportamental. Casada há 15 anos e pregadora há 13 anos. Tornei-me terapeuta após atravessar depressão e ansiedade. Minha missão é integrar acolhimento humano, fé e técnicas baseadas em evidências para que você viva com clareza, paz e propósito.
+                    </p>
+                    <p class="text-gray-700 mb-6 leading-relaxed">
+                        Eu já estive no escuro: depressão, ansiedade e crises de pânico. Precisei de psiquiatra, terapia, ansiolítico e antidepressivo. Foi nesse vale que descobri caminhos de reprocessamento, fé e ciência integrados. Hoje, estendo a mão para caminhar com você rumo à restauração.
+                    </p>
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-4 neumorphic neumorphic-hover squircle-sm p-3">
+                            <div class="icon-squircle-neu-sm text-yellow-600">
+                                <i class="fas fa-praying-hands"></i>
+                            </div>
+                            <span class="text-gray-700 font-medium">Fé e ciência em diálogo</span>
+                        </div>
+                        <div class="flex items-center gap-4 neumorphic neumorphic-hover squircle-sm p-3">
+                            <div class="icon-squircle-neu-sm text-yellow-600">
+                                <i class="fas fa-hands-helping"></i>
+                            </div>
+                            <span class="text-gray-700 font-medium">Acolhimento sem julgamentos</span>
+                        </div>
+                        <div class="flex items-center gap-4 neumorphic neumorphic-hover squircle-sm p-3">
+                            <div class="icon-squircle-neu-sm text-yellow-600">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <span class="text-gray-700 font-medium">Ética, sigilo e simplicidade prática</span>
+                        </div>
+                        <div class="flex items-center gap-4 neumorphic neumorphic-hover squircle-sm p-3">
+                            <div class="icon-squircle-neu-sm text-yellow-600">
+                                <i class="fas fa-heart"></i>
+                            </div>
+                            <span class="text-gray-700 font-medium">Saúde integral do corpo, alma e espírito</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Serviços Section — SQUIRCLE + GLASS cards -->
+    <section id="servicos" class="py-16 px-4" style="background: linear-gradient(135deg, rgba(178,223,219,0.4) 0%, rgba(224,242,241,0.6) 100%);">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold text-center text-teal-900 mb-12">Serviços</h2>
+            
+            <!-- Carousel Container -->
+            <div class="relative">
+                <!-- Carousel Wrapper -->
+                <div class="overflow-hidden">
+                    <div id="carouselTrack" class="flex transition-transform duration-500 ease-in-out">
+                        <!-- Slide 1 -->
+                        <div class="carousel-slide min-w-full grid grid-cols-1 md:grid-cols-2 gap-8 px-2">
+                            <div class="card-squircle-glass p-6">
+                                <div class="icon-squircle-neu text-teal-700 mb-4">
+                                    <i class="fas fa-user-check text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-semibold text-teal-900 mb-3">Atendimento Presencial</h3>
+                                <p class="text-gray-600">Sessões presenciais em ambiente acolhedor e seguro</p>
+                            </div>
+                            <div class="card-squircle-glass p-6">
+                                <div class="icon-squircle-neu text-teal-700 mb-4">
+                                    <i class="fas fa-video text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-semibold text-teal-900 mb-3">Atendimento Online</h3>
+                                <p class="text-gray-600">Sessões por videochamada com total privacidade</p>
+                            </div>
+                        </div>
+
+                        <!-- Slide 2 -->
+                        <div class="carousel-slide min-w-full grid grid-cols-1 md:grid-cols-2 gap-8 px-2">
+                            <div class="card-squircle-glass p-6">
+                                <div class="icon-squircle-neu text-teal-700 mb-4">
+                                    <i class="fas fa-users text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-semibold text-teal-900 mb-3">Atendimento de Casais</h3>
+                                <p class="text-gray-600">Fortalecimento de vínculos e resolução de conflitos</p>
+                            </div>
+                            <div class="card-squircle-glass p-6">
+                                <div class="icon-squircle-neu text-teal-700 mb-4">
+                                    <i class="fas fa-child text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-semibold text-teal-900 mb-3">Atendimento Infantil</h3>
+                                <p class="text-gray-600">Acompanhamento especializado para crianças e adolescentes</p>
+                            </div>
+                        </div>
+
+                        <!-- Slide 3 -->
+                        <div class="carousel-slide min-w-full grid grid-cols-1 md:grid-cols-2 gap-8 px-2">
+                            <div class="card-squircle-glass p-6">
+                                <div class="icon-squircle-neu text-teal-700 mb-4">
+                                    <i class="fas fa-pills text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-semibold text-teal-900 mb-3">Suplementação livre de prescrição</h3>
+                                <p class="text-gray-600">Reposição de vitaminas e minerais de forma natural e segura</p>
+                            </div>
+                            <div class="card-squircle-glass p-6">
+                                <div class="icon-squircle-neu text-teal-700 mb-4">
+                                    <i class="fas fa-microphone text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-semibold text-teal-900 mb-3">Palestras</h3>
+                                <p class="text-gray-600">Palestras educativas sobre saúde física, emocional e mental</p>
+                            </div>
+                        </div>
+
+                        <!-- Slide 4 -->
+                        <div class="carousel-slide min-w-full grid grid-cols-1 md:grid-cols-2 gap-8 px-2">
+                            <div class="card-squircle-glass p-6">
+                                <div class="icon-squircle-neu text-teal-700 mb-4">
+                                    <i class="fas fa-brain text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-semibold text-teal-900 mb-3">Análise Comportamental</h3>
+                                <p class="text-gray-600">Avaliação e compreensão de padrões comportamentais</p>
+                            </div>
+                            <div class="card-squircle-glass p-6">
+                                <div class="icon-squircle-neu text-teal-700 mb-4">
+                                    <i class="fas fa-heart-pulse text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-semibold text-teal-900 mb-3">Gestão das Emoções</h3>
+                                <p class="text-gray-600">Desenvolvimento de habilidades para gerenciar emoções de forma saudável</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Buttons — SQUIRCLE + GLASS -->
+                <button id="prevBtn" class="carousel-btn absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 text-white p-3 z-10">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button id="nextBtn" class="carousel-btn absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 text-white p-3 z-10">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+
+                <!-- Dots Indicator — SQUIRCLE -->
+                <div class="flex justify-center gap-3 mt-8">
+                    <button class="carousel-dot carousel-dot-squircle w-3 h-3 bg-yellow-600" data-slide="0"></button>
+                    <button class="carousel-dot carousel-dot-squircle w-3 h-3 bg-gray-300" data-slide="1"></button>
+                    <button class="carousel-dot carousel-dot-squircle w-3 h-3 bg-gray-300" data-slide="2"></button>
+                    <button class="carousel-dot carousel-dot-squircle w-3 h-3 bg-gray-300" data-slide="3"></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Transtornos Emocionais Section — SQUIRCLE + NEU + GLASS cards (MODAL) -->
+    <section id="transtornos" class="py-16 px-4 section-neu-bg">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold text-center text-teal-900 mb-4">Transtornos Emocionais</h2>
+            <p class="text-center text-gray-600 mb-12 text-lg">Clique em cada card para saber mais sobre como identificar</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Ansiedade -->
+                <div class="transtorno-card card-transtorno p-6"
+                     data-titulo="Ansiedade"
+                     data-icon="fas fa-heartbeat"
+                     data-desc="Tratamento especializado para controle da ansiedade"
+                     data-detalhes="Preocupação excessiva e constante, tensão muscular, dificuldade de concentração, irritabilidade, problemas para dormir, sensação de perigo iminente, coração acelerado e respiração ofegante.">
+                    <div class="icon-squircle-neu text-yellow-600 mb-3">
+                        <i class="fas fa-heartbeat text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-teal-800 text-xl mb-2">Ansiedade</h3>
+                    <p class="text-gray-600 mb-2">Tratamento especializado para controle da ansiedade</p>
+                    <p class="text-yellow-700 text-sm font-medium mt-3"><i class="fas fa-hand-pointer mr-1"></i> Clique para saber mais</p>
+                </div>
+
+                <!-- Depressão -->
+                <div class="transtorno-card card-transtorno p-6"
+                     data-titulo="Depressão"
+                     data-icon="fas fa-cloud-rain"
+                     data-desc="Acompanhamento terapêutico para superação da depressão"
+                     data-detalhes="Tristeza profunda e persistente, perda de interesse em atividades antes prazerosas, alterações no sono e apetite, fadiga constante, sentimentos de culpa ou inutilidade, dificuldade de concentração e pensamentos sobre morte.">
+                    <div class="icon-squircle-neu text-yellow-600 mb-3">
+                        <i class="fas fa-cloud-rain text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-teal-800 text-xl mb-2">Depressão</h3>
+                    <p class="text-gray-600 mb-2">Acompanhamento terapêutico para superação da depressão</p>
+                    <p class="text-yellow-700 text-sm font-medium mt-3"><i class="fas fa-hand-pointer mr-1"></i> Clique para saber mais</p>
+                </div>
+
+                <!-- Insônia -->
+                <div class="transtorno-card card-transtorno p-6"
+                     data-titulo="Insônia"
+                     data-icon="fas fa-moon"
+                     data-desc="Técnicas para melhorar a qualidade do sono"
+                     data-detalhes="Dificuldade para iniciar ou manter o sono, despertar muito cedo, sono não reparador, cansaço durante o dia, irritabilidade, dificuldade de concentração e preocupação constante com o sono.">
+                    <div class="icon-squircle-neu text-yellow-600 mb-3">
+                        <i class="fas fa-moon text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-teal-800 text-xl mb-2">Insônia</h3>
+                    <p class="text-gray-600 mb-2">Técnicas para melhorar a qualidade do sono</p>
+                    <p class="text-yellow-700 text-sm font-medium mt-3"><i class="fas fa-hand-pointer mr-1"></i> Clique para saber mais</p>
+                </div>
+
+                <!-- Fobias -->
+                <div class="transtorno-card card-transtorno p-6"
+                     data-titulo="Fobias"
+                     data-icon="fas fa-exclamation-triangle"
+                     data-desc="Tratamento de medos e fobias específicas"
+                     data-detalhes="Medo intenso e desproporcional de objetos ou situações específicas, evitação do estímulo fóbico, ansiedade antecipatória, reações físicas como sudorese, tremores e taquicardia ao se deparar com o objeto do medo.">
+                    <div class="icon-squircle-neu text-yellow-600 mb-3">
+                        <i class="fas fa-exclamation-triangle text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-teal-800 text-xl mb-2">Fobias</h3>
+                    <p class="text-gray-600 mb-2">Tratamento de medos e fobias específicas</p>
+                    <p class="text-yellow-700 text-sm font-medium mt-3"><i class="fas fa-hand-pointer mr-1"></i> Clique para saber mais</p>
+                </div>
+
+                <!-- Dependência Emocional -->
+                <div class="transtorno-card card-transtorno p-6"
+                     data-titulo="Dependência Emocional"
+                     data-icon="fas fa-link"
+                     data-desc="Desenvolvimento de autonomia emocional"
+                     data-detalhes="Necessidade excessiva de aprovação dos outros, medo intenso de abandono, dificuldade em tomar decisões sozinho, baixa autoestima, tolerância a relacionamentos abusivos e sensação de vazio quando está só.">
+                    <div class="icon-squircle-neu text-yellow-600 mb-3">
+                        <i class="fas fa-link text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-teal-800 text-xl mb-2">Dependência Emocional</h3>
+                    <p class="text-gray-600 mb-2">Desenvolvimento de autonomia emocional</p>
+                    <p class="text-yellow-700 text-sm font-medium mt-3"><i class="fas fa-hand-pointer mr-1"></i> Clique para saber mais</p>
+                </div>
+
+                <!-- Síndrome do Pânico -->
+                <div class="transtorno-card card-transtorno p-6"
+                     data-titulo="Síndrome do Pânico"
+                     data-icon="fas fa-bolt"
+                     data-desc="Controle e prevenção de crises de pânico"
+                     data-detalhes="Ataques súbitos de medo intenso, palpitações, sudorese, tremores, falta de ar, sensação de sufocamento, dor no peito, náusea, tontura, medo de morrer ou perder o controle, e preocupação persistente com novos ataques.">
+                    <div class="icon-squircle-neu text-yellow-600 mb-3">
+                        <i class="fas fa-bolt text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-teal-800 text-xl mb-2">Síndrome do Pânico</h3>
+                    <p class="text-gray-600 mb-2">Controle e prevenção de crises de pânico</p>
+                    <p class="text-yellow-700 text-sm font-medium mt-3"><i class="fas fa-hand-pointer mr-1"></i> Clique para saber mais</p>
+                </div>
+
+                <!-- Insegurança -->
+                <div class="transtorno-card card-transtorno p-6"
+                     data-titulo="Insegurança"
+                     data-icon="fas fa-user-shield"
+                     data-desc="Fortalecimento da confiança e segurança pessoal"
+                     data-detalhes="Dúvida constante sobre suas capacidades, necessidade excessiva de validação externa, dificuldade em tomar decisões, comparação frequente com os outros, medo de falhar e evitação de desafios.">
+                    <div class="icon-squircle-neu text-yellow-600 mb-3">
+                        <i class="fas fa-user-shield text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-teal-800 text-xl mb-2">Insegurança</h3>
+                    <p class="text-gray-600 mb-2">Fortalecimento da confiança e segurança pessoal</p>
+                    <p class="text-yellow-700 text-sm font-medium mt-3"><i class="fas fa-hand-pointer mr-1"></i> Clique para saber mais</p>
+                </div>
+
+                <!-- Angústia -->
+                <div class="transtorno-card card-transtorno p-6"
+                     data-titulo="Angústia"
+                     data-icon="fas fa-sad-tear"
+                     data-desc="Alívio e compreensão de sentimentos angustiantes"
+                     data-detalhes="Sensação de aperto no peito, desconforto emocional intenso sem causa aparente, inquietação, dificuldade para relaxar, pensamentos negativos recorrentes e sensação de que algo ruim vai acontecer.">
+                    <div class="icon-squircle-neu text-yellow-600 mb-3">
+                        <i class="fas fa-sad-tear text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-teal-800 text-xl mb-2">Angústia</h3>
+                    <p class="text-gray-600 mb-2">Alívio e compreensão de sentimentos angustiantes</p>
+                    <p class="text-yellow-700 text-sm font-medium mt-3"><i class="fas fa-hand-pointer mr-1"></i> Clique para saber mais</p>
+                </div>
+
+                <!-- Burnout -->
+                <div class="transtorno-card card-transtorno p-6"
+                     data-titulo="Burnout"
+                     data-icon="fas fa-fire"
+                     data-desc="Recuperação do esgotamento físico e mental"
+                     data-detalhes="Exaustão física e emocional extrema, cinismo em relação ao trabalho, sensação de ineficácia, dificuldade de concentração, irritabilidade, problemas de sono, dores de cabeça frequentes e isolamento social.">
+                    <div class="icon-squircle-neu text-yellow-600 mb-3">
+                        <i class="fas fa-fire text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-teal-800 text-xl mb-2">Burnout</h3>
+                    <p class="text-gray-600 mb-2">Recuperação do esgotamento físico e mental</p>
+                    <p class="text-yellow-700 text-sm font-medium mt-3"><i class="fas fa-hand-pointer mr-1"></i> Clique para saber mais</p>
+                </div>
+
+                <!-- Auto Estima -->
+                <div class="transtorno-card card-transtorno p-6"
+                     data-titulo="Auto Estima"
+                     data-icon="fas fa-smile"
+                     data-desc="Fortalecimento da autoestima e amor próprio"
+                     data-detalhes="Autocrítica excessiva, dificuldade em aceitar elogios, sentimento de inadequação, comparação constante com os outros, dificuldade em estabelecer limites, medo de rejeição e tendência a se colocar em último lugar.">
+                    <div class="icon-squircle-neu text-yellow-600 mb-3">
+                        <i class="fas fa-smile text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-teal-800 text-xl mb-2">Auto Estima</h3>
+                    <p class="text-gray-600 mb-2">Fortalecimento da autoestima e amor próprio</p>
+                    <p class="text-yellow-700 text-sm font-medium mt-3"><i class="fas fa-hand-pointer mr-1"></i> Clique para saber mais</p>
+                </div>
+
+                <!-- Traumas -->
+                <div class="transtorno-card card-transtorno p-6"
+                     data-titulo="Traumas"
+                     data-icon="fas fa-band-aid"
+                     data-desc="Reprocessamento e cura de traumas emocionais"
+                     data-detalhes="Memórias intrusivas do evento traumático, pesadelos recorrentes, evitação de situações que lembrem o trauma, hipervigilância, reações exageradas de sobressalto, alterações de humor e dificuldade em confiar nas pessoas.">
+                    <div class="icon-squircle-neu text-yellow-600 mb-3">
+                        <i class="fas fa-band-aid text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-teal-800 text-xl mb-2">Traumas</h3>
+                    <p class="text-gray-600 mb-2">Reprocessamento e cura de traumas emocionais</p>
+                    <p class="text-yellow-700 text-sm font-medium mt-3"><i class="fas fa-hand-pointer mr-1"></i> Clique para saber mais</p>
+                </div>
+
+                <!-- Congelamento Emocional -->
+                <div class="transtorno-card card-transtorno p-6"
+                     data-titulo="Congelamento Emocional"
+                     data-icon="fas fa-snowflake"
+                     data-desc="Reconexão com as emoções e sentimentos"
+                     data-detalhes="Dificuldade em sentir ou expressar emoções, sensação de vazio ou dormência emocional, desconexão de si mesmo e dos outros, dificuldade em identificar o que está sentindo e resposta emocional limitada a eventos significativos.">
+                    <div class="icon-squircle-neu text-yellow-600 mb-3">
+                        <i class="fas fa-snowflake text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-teal-800 text-xl mb-2">Congelamento Emocional</h3>
+                    <p class="text-gray-600 mb-2">Reconexão com as emoções e sentimentos</p>
+                    <p class="text-yellow-700 text-sm font-medium mt-3"><i class="fas fa-hand-pointer mr-1"></i> Clique para saber mais</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== MODAL BALÃO ========== -->
+    <div id="modalOverlay" class="modal-overlay">
+        <div class="modal-balao">
+            <button class="modal-close" id="modalClose" aria-label="Fechar">
+                <i class="fas fa-times"></i>
             </button>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between text-xs pt-1">
-          <label class="flex items-center text-slate-600 cursor-pointer">
-            <input type="checkbox" class="rounded border-teal-300 text-teal-600 focus:ring-teal-500 mr-2">
-            Lembrar-me
-          </label>
-          <a href="#" id="forgot-password-link" class="text-teal-700 hover:text-amber-700 font-medium">Esqueceu a senha?</a>
-        </div>
-
-        <button type="submit" id="btn-login-submit" 
-          class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-teal-700 via-teal-600 to-amber-600 text-white font-bold text-sm shadow-lg hover:shadow-xl hover:opacity-95 transform active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 mt-2">
-          <span>Entrar no Portal</span>
-          <i class="fa-solid fa-arrow-right text-xs"></i>
-        </button>
-      </form>
-
-      <!-- REGISTER FORM (Hidden by default) -->
-      <form id="register-form" class="space-y-4 hidden">
-        <div>
-          <label class="block text-xs font-semibold text-teal-950 uppercase tracking-wider mb-1.5">Nome Completo</label>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-600">
-              <i class="fa-solid fa-user"></i>
+            <div class="text-center">
+                <div class="icon-squircle-neu mx-auto mb-4 text-yellow-600" style="width: 4rem; height: 4rem;">
+                    <i id="modalIcon" class="fas fa-heartbeat text-2xl"></i>
+                </div>
+                <h3 id="modalTitulo" class="text-2xl font-bold text-teal-900 mb-2">Título</h3>
+                <p id="modalDesc" class="text-gray-600 mb-4">Descrição</p>
+                <div class="mt-4 pt-4 border-t border-teal-200 text-left">
+                    <p class="text-sm text-gray-700 leading-relaxed">
+                        <strong class="text-teal-800">Como identificar:</strong> <span id="modalDetalhes">Detalhes</span>
+                    </p>
+                </div>
+                <a href="https://wa.me/5531982227168?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta."
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="modal-cta mt-6 inline-block">
+                    <i class="fab fa-whatsapp mr-2"></i>
+                    Agendar Consulta
+                </a>
             </div>
-            <input type="text" id="reg-name" required placeholder="Seu nome e sobrenome" 
-              class="w-full pl-10 pr-4 py-3 rounded-xl bg-teal-50/50 border border-teal-200/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm text-slate-800 transition-all">
-          </div>
         </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-teal-950 uppercase tracking-wider mb-1.5">E-mail</label>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-600">
-              <i class="fa-solid fa-envelope"></i>
-            </div>
-            <input type="email" id="reg-email" required placeholder="seu@email.com" 
-              class="w-full pl-10 pr-4 py-3 rounded-xl bg-teal-50/50 border border-teal-200/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm text-slate-800 transition-all">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-teal-950 uppercase tracking-wider mb-1.5">Senha</label>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-600">
-              <i class="fa-solid fa-lock"></i>
-            </div>
-            <input type="password" id="reg-password" required placeholder="Mínimo 6 caracteres" 
-              class="w-full pl-10 pr-10 py-3 rounded-xl bg-teal-50/50 border border-teal-200/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm text-slate-800 transition-all">
-            <button type="button" id="toggle-reg-password" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-teal-700">
-              <i class="fa-solid fa-eye"></i>
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-teal-950 uppercase tracking-wider mb-1.5">Confirmar Senha</label>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-600">
-              <i class="fa-solid fa-shield-halved"></i>
-            </div>
-            <input type="password" id="reg-confirm-password" required placeholder="Repita a senha" 
-              class="w-full pl-10 pr-4 py-3 rounded-xl bg-teal-50/50 border border-teal-200/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm text-slate-800 transition-all">
-          </div>
-        </div>
-
-        <button type="submit" id="btn-register-submit" 
-          class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-600 via-teal-600 to-teal-700 text-white font-bold text-sm shadow-lg hover:shadow-xl hover:opacity-95 transform active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 mt-2">
-          <span>Criar Minha Conta</span>
-          <i class="fa-solid fa-heart text-xs"></i>
-        </button>
-      </form>
-
-      <!-- Decorative Social Login Section -->
-      <div class="mt-6 pt-5 border-t border-teal-700/15 text-center">
-        <p class="text-xs text-slate-500 mb-3 font-medium">Ou continue com</p>
-        <button type="button" id="btn-google-login" class="w-full py-2.5 px-4 rounded-xl bg-white/80 hover:bg-white border border-teal-200 text-slate-700 font-medium text-xs shadow-sm hover:shadow transition-all flex items-center justify-center gap-2">
-          <svg class="w-4 h-4" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-          </svg>
-          <span>Google (Em breve)</span>
-        </button>
-      </div>
-
     </div>
-  </main>
 
-  <!-- Footer -->
-  <footer class="w-full max-w-md pb-4 text-center text-xs text-teal-100/80 z-10">
-    <p>© 2026 Espaço de Acolhimento • Jaqueline Camila</p>
-    <p class="text-[11px] text-teal-200/60 mt-0.5">Psicologia Clínica & Psicoterapia • Todos os direitos reservados</p>
-  </footer>
 
-  <!-- Auth JS Logic -->
-  <script src="js/auth.js"></script>
+    <!-- Depoimentos Section — SQUIRCLE + GLASS + TRUSTINDEX -->
+    <section id="depoimentos" class="py-16 px-4 section-depoimentos-bg">
+        <div class="max-w-4xl mx-auto">
+            <div class="text-center mb-10">
+                <span class="depoimento-badge mb-4">
+                    <i class="fas fa-comments"></i>
+                    Depoimentos
+                </span>
+                <h2 class="text-3xl md:text-4xl font-bold text-teal-900 mb-4">O que dizem sobre o atendimento</h2>
+                <p class="text-gray-600 text-lg max-w-2xl mx-auto">
+                    Compartilhe sua experiência ou leia os depoimentos de quem já passou por aqui. Seu relato pode inspirar quem ainda precisa dar o primeiro passo.
+                </p>
+            </div>
+
+            <!-- Container Google Reviews — SociableKit -->
+            <div class="trustindex-container">
+                <div class="sk-ww-google-reviews" data-embed-id="25699998"></div><script src="https://widgets.sociablekit.com/google-reviews/widget.js" defer></script>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contato Section — GLASS DARK + SQUIRCLE -->
+    <section id="contato" class="py-16 px-4 text-white" style="background: linear-gradient(135deg, rgba(15,76,70,0.95) 0%, rgba(13,60,57,0.95) 100%);">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6 text-yellow-100">Entre em Contato</h2>
+            <p class="text-lg mb-8 text-yellow-50">Agende sua consulta e dê o primeiro passo para uma vida mais equilibrada</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <a href="https://wa.me/5531982227168?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20consulta." 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="contact-glass p-6 block">
+                    <div class="icon-glass-dark mx-auto mb-3 text-yellow-400">
+                        <i class="fab fa-whatsapp text-xl"></i>
+                    </div>
+                    <p class="font-semibold text-yellow-100">WhatsApp</p>
+                    <p class="text-yellow-50">(31) 98222-7168</p>
+                </a>
+                <a href="https://www.instagram.com/jaquelinecamilaofc" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="contact-glass p-6 block">
+                    <div class="icon-glass-dark mx-auto mb-3 text-yellow-400">
+                        <i class="fab fa-instagram text-xl"></i>
+                    </div>
+                    <p class="font-semibold text-yellow-100">Instagram</p>
+                    <p class="text-yellow-50">@jaquelinecamilaofc</p>
+                </a>
+                <a href="https://www.google.com/maps/search/?api=1&query=Rua+Prof+Osvaldo+Franco+90+Centro+Betim+MG" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="contact-glass p-6 block">
+                    <div class="icon-glass-dark mx-auto mb-3 text-yellow-400">
+                        <i class="fas fa-map-marker-alt text-xl"></i>
+                    </div>
+                    <p class="font-semibold text-yellow-100">Endereço</p>
+                    <p class="text-yellow-50">Rua Prof Osvaldo Franco, 90<br>Centro, Betim - MG</p>
+                </a>
+            </div>
+
+            <div class="flex justify-center gap-6 text-3xl">
+                <a href="https://www.instagram.com/jaquelinecamilaofc" target="_blank" rel="noopener noreferrer" class="social-icon text-yellow-400 hover:text-yellow-300 transition"><i class="fab fa-instagram"></i></a>
+                <a href="https://www.facebook.com/jaquelinecamilaofc" target="_blank" rel="noopener noreferrer" class="social-icon text-yellow-400 hover:text-yellow-300 transition"><i class="fab fa-facebook"></i></a>
+                <a href="https://wa.me/5531982227168" target="_blank" rel="noopener noreferrer" class="social-icon text-yellow-400 hover:text-yellow-300 transition"><i class="fab fa-whatsapp"></i></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer — GLASS -->
+    <footer class="footer-glass text-yellow-100 py-8 px-4 text-center">
+        <div class="mb-4">
+            <img src="https://cdn.abacus.ai/images/5739d25a-e882-4d98-9717-976fce79368e.png" alt="Terapeuta Jaqueline Camila" class="h-16 mx-auto mb-3 logo-squircle">
+        </div>
+        <p>&copy; 2025 Terapeuta Jaqueline Camila. Todos os direitos reservados.</p>
+    </footer>
+
+    <!-- ===== JAVASCRIPT (mantém toda a funcionalidade original) ===== -->
+    <script src="js/script.js"></script>
 </body>
 </html>
