@@ -16,15 +16,25 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Initialize SQLite database (auto-creates tables on startup)
+// Initialize database (auto-creates tables on startup)
 initDatabase();
 
 // Seed therapist account automatically
 seedTherapist();
 
-// Serve static files from 'public' folder
+// Serve static files from 'public' folder with no-cache for HTML and JS
 const publicPath = path.join(__dirname, '../public');
-app.use(express.static(publicPath));
+app.use(express.static(publicPath, {
+  etag: false,
+  lastModified: false,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+}));
 
 // API Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -40,7 +50,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/patient', patientRoutes);
 app.use('/api/therapist', therapistRoutes);
 
-// SPA fallback for non-API routes
+// SPA fallback for non-API routes — serves index.html (landing page)
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'Endpoint da API não encontrado' });
@@ -48,7 +58,7 @@ app.get('*', (req, res, next) => {
   const indexPath = path.join(publicPath, 'index.html');
   res.sendFile(indexPath, (err) => {
     if (err) {
-      res.status(404).send('Página não encontrada e index.html não existe no diretório public.');
+      res.status(404).send('Página não encontrada.');
     }
   });
 });
@@ -58,7 +68,6 @@ const startServer = () => {
   app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
     console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`Banco SQLite: dados/espaco_acolhimento.db`);
   });
 };
 
