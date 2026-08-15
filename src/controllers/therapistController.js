@@ -27,7 +27,7 @@ function normalizeDate(dateStr) {
 const getPatients = async (req, res) => {
   try {
     const patients = await all(
-      `SELECT id, name, email, created_at, is_active, whatsapp
+      `SELECT id, name, email, created_at, is_active, whatsapp, last_attended_at
        FROM users
        WHERE role = 'paciente'
        ORDER BY name ASC`,
@@ -69,8 +69,8 @@ const getPatients = async (req, res) => {
         const now = new Date();
         const diffMs = now - lastActivityDate;
         daysSinceUpdate = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        if (daysSinceUpdate <= 2) updateStatus = 'verde';
-        else if (daysSinceUpdate <= 7) updateStatus = 'amarelo';
+        if (daysSinceUpdate === 0) updateStatus = 'verde';
+        else if (daysSinceUpdate === 1) updateStatus = 'amarelo';
         else updateStatus = 'vermelho';
       }
 
@@ -80,6 +80,16 @@ const getPatients = async (req, res) => {
       else if (avgScore >= 5) status = 'atencao';
       else if (avgScore > 0) status = 'critico';
 
+      // Check if therapist has attended this patient
+      let attendedRecently = false;
+      let attendedAgo = null;
+      if (p.last_attended_at) {
+        const attendedDate = new Date(normalizeDate(p.last_attended_at));
+        const diffAttendedMs = new Date() - attendedDate;
+        attendedAgo = Math.floor(diffAttendedMs / (1000 * 60 * 60 * 24));
+        attendedRecently = attendedAgo === 0; // attended today
+      }
+
       patientsWithStats.push({
         ...p,
         is_active: p.is_active === undefined ? 1 : p.is_active,
@@ -87,6 +97,9 @@ const getPatients = async (req, res) => {
         last_activity: lastActivityDate ? lastActivityDate.toISOString() : null,
         days_since_update: daysSinceUpdate,
         update_status: updateStatus,
+        last_attended_at: p.last_attended_at || null,
+        attended_today: attendedRecently,
+        days_since_attended: attendedAgo,
         status
       });
     }
@@ -256,8 +269,44 @@ const togglePatientStatus = async (req, res) => {
   }
 };
 
+// Mark patient as attended by therapist (registers attention given)
+const markPatientAttended = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verify patient exists
+    const patient = await all(
+      `SELECT id, is_active FROM users WHERE id = @id AND role = 'paciente'`,
+      { id }
+    );
+
+    if (patient.length === 0) {
+      return res.status(404).json({ error: 'Paciente não encontrado.' });
+    }
+
+    // Update last_attended_at to now (UTC)
+    const nowUTC = new Date().toISOString();
+    await run(
+      `UPDATE users SET last_attended_at = @now WHERE id = @id`,
+      { now: nowUTC, id }
+    );
+
+    return res.status(200).json({
+      message: 'Paciente marcado como atendido.',
+      last_attended_at: nowUTC
+    });
+  } catch (error) {
+    console.error('Erro ao marcar atendimento:', error);
+    return res.status(500).json({
+      error: 'Erro interno',
+      message: 'Não foi possível marcar o atendimento.'
+    });
+  }
+};
+
 module.exports = {
   getPatients,
   getPatientHistory,
-  togglePatientStatus
+  togglePatientStatus,
+  markPatientAttended
 };

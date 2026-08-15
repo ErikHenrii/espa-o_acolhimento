@@ -128,15 +128,21 @@
           </div>
 
           <!-- Update Status Legend -->
-          <div class="flex items-center gap-3 px-1 py-2 text-[9px] text-slate-500">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 py-2 text-[9px] text-slate-500">
             <span class="flex items-center gap-1">
-              <span class="w-2 h-2 rounded-full bg-green-500"></span> Atualizado (0-2d)
+              <span class="w-2 h-2 rounded-full bg-green-500"></span> Hoje
             </span>
             <span class="flex items-center gap-1">
-              <span class="w-2 h-2 rounded-full bg-yellow-500"></span> Atenção (3-7d)
+              <span class="w-2 h-2 rounded-full bg-yellow-500"></span> 1 dia
             </span>
             <span class="flex items-center gap-1">
-              <span class="w-2 h-2 rounded-full bg-rose-500"></span> Atrasado (+7d)
+              <span class="w-2 h-2 rounded-full bg-rose-500"></span> 2+ dias
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-slate-300"></span> Sem dados
+            </span>
+            <span class="flex items-center gap-1">
+              <i class="fa-solid fa-check text-[8px] text-indigo-500"></i> Atendido hoje
             </span>
           </div>
 
@@ -180,6 +186,10 @@
                     <span id="overview-active-pill" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-800">
                       <span class="w-2 h-2 rounded-full bg-teal-500"></span> Ativo
                     </span>
+                    <button id="btn-mark-attended" onclick="markPatientAttended(selectedPatientId)" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all border cursor-pointer bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200">
+                      <i class="fa-solid fa-circle-check text-[10px]"></i>
+                      <span id="mark-attended-label">Marcar atendido</span>
+                    </button>
                     <button id="btn-toggle-patient-status" onclick="togglePatientStatus()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all border cursor-pointer">
                       <i class="fa-solid fa-power-off text-[10px]"></i>
                       <span id="toggle-status-label">Arquivar</span>

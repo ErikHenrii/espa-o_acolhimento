@@ -256,6 +256,50 @@ function renderPatientList(filterText = '') {
 }
 
 
+
+// ============================================================
+// Mark patient as attended by therapist
+// ============================================================
+async function markPatientAttended(patientId, event) {
+  if (event) event.stopPropagation();
+  
+  try {
+    const res = await fetch(API_BASE + '/therapist/patient/' + patientId + '/mark-attended', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + authToken,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      
+      // Update patient in the local list
+      const patient = patientsList.find(p => p.id === patientId);
+      if (patient) {
+        patient.last_attended_at = data.last_attended_at;
+        patient.attended_today = true;
+        patient.days_since_attended = 0;
+      }
+      
+      renderPatientList(document.getElementById('patient-search-input')?.value || '');
+      renderMobilePatientSelect();
+      
+      showToast('Paciente marcado como atendido', 'success');
+    } else if (res.status === 401) {
+      showToast('Sessão expirada. Faça login novamente.', 'error');
+    } else {
+      showToast('Erro ao marcar atendimento.', 'error');
+    }
+  } catch (e) {
+    console.error('markAttended error:', e);
+    showToast('Erro de conexão ao marcar atendimento.', 'error');
+  }
+}
+
+window.markPatientAttended = markPatientAttended;
+
 // ============================================================
 // Update status visual indicators
 // ============================================================
@@ -268,8 +312,8 @@ function getUpdateStatusInfo(p) {
     if (p.last_activity) {
       var diff = Date.now() - new Date(p.last_activity).getTime();
       days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      if (days <= 2) status = 'verde';
-      else if (days <= 7) status = 'amarelo';
+      if (days === 0) status = 'verde';
+      else if (days === 1) status = 'amarelo';
       else status = 'vermelho';
     } else {
       status = 'sem_dados';
@@ -293,7 +337,7 @@ function getUpdateStatusInfo(p) {
 function formatTimeAgo(days) {
   if (days === null || days === undefined) return 'Sem registros';
   if (days === 0) return 'Hoje';
-  if (days === 1) return 'Há 1 dia';
+  if (days === 1) return 'Ontem';
   if (days <= 7) return 'Há ' + days + ' dias';
   if (days <= 30) return 'Há ' + Math.floor(days / 7) + ' sem.';
   return 'Há ' + Math.floor(days / 30) + ' mês';
@@ -312,6 +356,15 @@ function renderPatientCard(p) {
   // Update status indicator (when was last emotional update)
   var updateInfo = getUpdateStatusInfo(p);
   
+  // Attended indicator (therapist gave attention)
+  var attendedToday = p.attended_today === true;
+  var attendedBadge = '';
+  if (attendedToday && isActive) {
+    attendedBadge = `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-amber-400/30 text-amber-200' : 'bg-indigo-100 text-indigo-700'} flex items-center gap-1 mt-0.5 w-fit">
+      <i class="fa-solid fa-check text-[8px]"></i> Atendido hoje
+    </span>`;
+  }
+
   var selectedBorder = isSelected ? '' : (updateInfo.status === 'verde' ? 'border-l-4 ' + updateInfo.border : '');
   var opacityClass = isActive ? '' : 'opacity-55';
   var statusBadge = isActive 
@@ -341,11 +394,13 @@ function renderPatientCard(p) {
             ${escapeHtml(p.name.charAt(0))}
           </div>
           <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${dotColorClass}"></span>
+          ${attendedToday ? `<span class="absolute -top-1 -left-1 w-4 h-4 rounded-full ${isSelected ? 'bg-amber-400 text-teal-900' : 'bg-indigo-500 text-white'} flex items-center justify-center text-[8px] shadow-sm"><i class="fa-solid fa-check"></i></span>` : ''}
         </div>
         <div class="text-left">
           <span class="block text-xs font-bold ${isSelected ? 'text-white' : 'text-teal-950'} line-clamp-1">${escapeHtml(p.name)}</span>
           ${statusBadge || `<span class="text-[10px] ${isSelected ? 'text-teal-200' : 'text-slate-400'}">Média: ${escapeHtml(p.avg_score.toFixed(1))}/10</span>`}
           ${updateIndicator}
+          ${attendedBadge}
         </div>
       </div>
       <i class="fa-solid fa-chevron-right text-[10px] ${isSelected ? 'text-amber-300' : 'text-slate-300'}"></i>

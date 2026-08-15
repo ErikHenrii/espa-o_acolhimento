@@ -113,6 +113,7 @@ async function initDatabase() {
   await safeAddColumn('users', 'is_active INTEGER NOT NULL DEFAULT 1');
   await safeAddColumn('users', "specialty TEXT DEFAULT 'Psicologia'");
   await safeAddColumn('users', "whatsapp TEXT DEFAULT ''");
+  await safeAddColumn('users', "last_attended_at TEXT DEFAULT NULL");
   await safeAddColumn('checkins', "notes TEXT DEFAULT ''");
 
   console.log('PostgreSQL tables initialized.');

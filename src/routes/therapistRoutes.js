@@ -16,4 +16,7 @@ router.get('/patient/:id/history', therapistController.getPatientHistory);
 // PATCH /api/therapist/patient/:id/toggle-status
 router.patch('/patient/:id/toggle-status', therapistController.togglePatientStatus);
 
+// POST /api/therapist/patient/:id/mark-attended
+router.post('/patient/:id/mark-attended', therapistController.markPatientAttended);
+
 module.exports = router;
