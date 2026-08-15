@@ -146,11 +146,14 @@ async function fetchPatients() {
   renderPatientList();
   renderMobilePatientSelect();
 
-  // Auto-select first patient if available
+  // Show dashboard landing page instead of auto-selecting first patient
   if (patientsList.length > 0) {
-    selectPatient(patientsList[0].id);
+    selectedPatientId = null;
+    showEmptyState(true);
+    renderDashboard();
   } else {
     showEmptyState(true);
+    renderDashboard();
   }
 }
 
@@ -620,6 +623,115 @@ function loadMockPatientHistory(patientId) {
     sleep: mockSleep,
     journals: mockJournals
   };
+}
+
+// ============================================================
+// Render Dashboard Landing Page (general overview)
+// ============================================================
+function renderDashboard() {
+  var active = patientsList.filter(function(p) { return p.is_active !== 0; });
+  var attendedToday = patientsList.filter(function(p) { return p.attended_today === true; });
+  var needAttention = patientsList.filter(function(p) {
+    return p.avg_score > 0 && p.avg_score < 5 && p.is_active !== 0;
+  });
+  var newData = patientsList.filter(function(p) { return p.has_new_data === true && p.is_active !== 0; });
+
+  // Stat cards
+  document.getElementById('dash-total-patients').textContent = active.length;
+  document.getElementById('dash-attended-today').textContent = attendedToday.length;
+  document.getElementById('dash-need-attention').textContent = needAttention.length;
+  document.getElementById('dash-new-data').textContent = newData.length;
+
+  // Trend labels
+  var trendPatients = document.getElementById('dash-trend-patients');
+  if (trendPatients) trendPatients.textContent = active.length > 0 ? 'Ativos' : '';
+  var trendAttended = document.getElementById('dash-trend-attended');
+  if (trendAttended) trendAttended.textContent = attendedToday.length > 0 ? 'Hoje' : 'Nenhum';
+  var trendAttention = document.getElementById('dash-trend-attention');
+  if (trendAttention) trendAttention.textContent = needAttention.length > 0 ? 'Atenção' : 'Tudo OK';
+  var trendNew = document.getElementById('dash-trend-new');
+  if (trendNew) trendNew.textContent = newData.length > 0 ? 'Não vistos' : 'Em dia';
+
+  // Status breakdown
+  var stable = active.filter(function(p) { return p.avg_score >= 7; }).length;
+  var warning = active.filter(function(p) { return p.avg_score >= 5 && p.avg_score < 7; }).length;
+  var critical = active.filter(function(p) { return p.avg_score > 0 && p.avg_score < 5; }).length;
+  var noData = active.filter(function(p) { return p.avg_score === 0; }).length;
+  var totalActive = active.length || 1;
+
+  var statusBreakdown = document.getElementById('dash-status-breakdown');
+  if (statusBreakdown) {
+    statusBreakdown.innerHTML = `
+      <div class="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+          <span class="text-xs font-semibold text-emerald-800">Quadro Estável</span>
+        </div>
+        <span class="text-sm font-bold text-emerald-900">${stable}</span>
+      </div>
+      <div class="flex items-center justify-between p-2.5 rounded-xl bg-orange-50 border border-orange-200">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+          <span class="text-xs font-semibold text-orange-800">Requer Atenção</span>
+        </div>
+        <span class="text-sm font-bold text-orange-900">${warning}</span>
+      </div>
+      <div class="flex items-center justify-between p-2.5 rounded-xl bg-rose-50 border border-rose-200">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+          <span class="text-xs font-semibold text-rose-800">Alerta Clínico</span>
+        </div>
+        <span class="text-sm font-bold text-rose-900">${critical}</span>
+      </div>
+      <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+          <span class="text-xs font-semibold text-slate-600">Sem Dados</span>
+        </div>
+        <span class="text-sm font-bold text-slate-700">${noData}</span>
+      </div>
+    `;
+  }
+
+  // Recent updates (patients sorted by last_activity, most recent first)
+  var sorted = active
+    .filter(function(p) { return p.last_activity; })
+    .sort(function(a, b) {
+      return new Date(b.last_activity) - new Date(a.last_activity);
+    })
+    .slice(0, 6);
+
+  var recentEl = document.getElementById('dash-recent-updates');
+  if (recentEl) {
+    if (sorted.length === 0) {
+      recentEl.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Nenhuma atualização recente.</p>';
+    } else {
+      recentEl.innerHTML = sorted.map(function(p) {
+        var updateInfo = getUpdateStatusInfo(p);
+        var timeLabel = formatTimeAgo(p.days_since_update);
+        var attendedTag = p.attended_today ? '<span class="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full">Atendido</span>' : '';
+        var newTag = p.has_new_data ? '<span class="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full">Novos dados</span>' : '';
+
+        return `
+          <div onclick="selectPatient('${escapeHtml(p.id)}')" class="flex items-center justify-between p-2.5 rounded-xl bg-white border border-teal-100 hover:bg-teal-50/60 cursor-pointer transition-all">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-teal-100 text-teal-800 font-bold text-xs flex items-center justify-center">${escapeHtml(p.name.charAt(0))}</div>
+              <div>
+                <p class="text-xs font-bold text-teal-950">${escapeHtml(p.name)}</p>
+                <div class="flex items-center gap-1.5 mt-0.5">
+                  <span class="w-1.5 h-1.5 rounded-full ${updateInfo.color}"></span>
+                  <span class="text-[10px] text-slate-500">${timeLabel}</span>
+                  ${attendedTag}
+                  ${newTag}
+                </div>
+              </div>
+            </div>
+            <span class="text-xs font-bold text-teal-700">${p.avg_score.toFixed(1)}/10</span>
+          </div>
+        `;
+      }).join('');
+    }
+  }
 }
 
 function showEmptyState(show) {

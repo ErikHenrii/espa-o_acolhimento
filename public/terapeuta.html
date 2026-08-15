@@ -161,13 +161,104 @@
       <!-- MAIN AREA: Selected Patient Details (Col Span 8 / 9) -->
       <section class="md:col-span-8 lg:col-span-9 space-y-6">
 
-        <!-- EMPTY STATE (Shown when no patient selected) -->
-        <div id="empty-state-view" class="glass border border-teal-200/60 rounded-3xl p-12 text-center my-12 hidden">
-          <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center text-2xl">
-            <i class="fa-solid fa-folder-open"></i>
+        <!-- DASHBOARD LANDING PAGE (Shown after login, before selecting a patient) -->
+        <div id="empty-state-view" class="space-y-6">
+          <!-- Welcome Header -->
+          <div class="glass border border-teal-200/80 rounded-3xl p-6 shadow-sm">
+            <div class="flex items-center gap-4">
+              <div class="w-14 h-14 rounded-2xl bg-teal-700 text-white flex items-center justify-center text-2xl shadow-md">
+                <i class="fa-solid fa-hand-holding-heart"></i>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold text-teal-950">Bem-vinda</h2>
+                <p class="text-sm text-slate-500">Visão geral do seu painel de acompanhamento</p>
+              </div>
+            </div>
           </div>
-          <h3 class="text-lg font-bold text-teal-950 mb-1">Nenhum Paciente Selecionado</h3>
-          <p class="text-sm text-slate-500 max-w-sm mx-auto">Selecione um paciente na lista ao lado para visualizar os gráficos de evolução, diário e registros de sono.</p>
+
+          <!-- Stats Cards Row -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Total Active Patients -->
+            <div class="glass border border-teal-200/80 rounded-2xl p-5 shadow-sm">
+              <div class="flex items-center justify-between mb-2">
+                <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center">
+                  <i class="fa-solid fa-users"></i>
+                </div>
+                <span id="dash-trend-patients" class="text-[10px] font-bold text-teal-600"></span>
+              </div>
+              <p class="text-2xl font-bold text-teal-950" id="dash-total-patients">0</p>
+              <p class="text-xs text-slate-500 font-medium">Pacientes Ativos</p>
+            </div>
+
+            <!-- Attended Today -->
+            <div class="glass border border-teal-200/80 rounded-2xl p-5 shadow-sm">
+              <div class="flex items-center justify-between mb-2">
+                <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                  <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <span id="dash-trend-attended" class="text-[10px] font-bold text-indigo-600"></span>
+              </div>
+              <p class="text-2xl font-bold text-teal-950" id="dash-attended-today">0</p>
+              <p class="text-xs text-slate-500 font-medium">Atendidos Hoje</p>
+            </div>
+
+            <!-- Need Attention -->
+            <div class="glass border border-teal-200/80 rounded-2xl p-5 shadow-sm">
+              <div class="flex items-center justify-between mb-2">
+                <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
+                  <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <span id="dash-trend-attention" class="text-[10px] font-bold text-rose-600"></span>
+              </div>
+              <p class="text-2xl font-bold text-teal-950" id="dash-need-attention">0</p>
+              <p class="text-xs text-slate-500 font-medium">Requerem Atenção</p>
+            </div>
+
+            <!-- New Data -->
+            <div class="glass border border-teal-200/80 rounded-2xl p-5 shadow-sm">
+              <div class="flex items-center justify-between mb-2">
+                <div class="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center">
+                  <i class="fa-solid fa-bell"></i>
+                </div>
+                <span id="dash-trend-new" class="text-[10px] font-bold text-violet-600"></span>
+              </div>
+              <p class="text-2xl font-bold text-teal-950" id="dash-new-data">0</p>
+              <p class="text-xs text-slate-500 font-medium">Novos Dados</p>
+            </div>
+          </div>
+
+          <!-- Two Columns: Status Overview + Recent Activity -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Status Overview -->
+            <div class="glass border border-teal-200/80 rounded-2xl p-5 shadow-sm">
+              <h3 class="text-xs font-bold text-teal-950 uppercase tracking-wider flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-heart-pulse text-teal-600"></i>
+                Estado Emocional dos Pacientes
+              </h3>
+              <div id="dash-status-breakdown" class="space-y-3">
+                <!-- Rendered by JS -->
+              </div>
+            </div>
+
+            <!-- Patients Needing Attention -->
+            <div class="glass border border-teal-200/80 rounded-2xl p-5 shadow-sm">
+              <h3 class="text-xs font-bold text-teal-950 uppercase tracking-wider flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-clock-rotate-left text-rose-600"></i>
+                Atualizações Recentes
+              </h3>
+              <div id="dash-recent-updates" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <!-- Rendered by JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Tip -->
+          <div class="glass border border-teal-200/60 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center flex-shrink-0">
+              <i class="fa-solid fa-lightbulb"></i>
+            </div>
+            <p class="text-xs text-slate-600">Selecione um paciente na lista ao lado para visualizar os gráficos de evolução, diário e registros de sono.</p>
+          </div>
         </div>
 
         <!-- ACTIVE PATIENT DETAILS VIEW -->
