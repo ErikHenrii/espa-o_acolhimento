@@ -46,11 +46,35 @@ const getPatients = async (req, res) => {
         ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
         : 0;
 
-      const lastActivity = await all(
-        `SELECT created_at FROM checkins WHERE patient_id = @patientId ORDER BY created_at DESC LIMIT 1`,
-        { patientId: p.id }
-      );
+      // Check most recent activity across checkins, sleep, and journal
+      const [lastCheckin, lastSleep, lastJournal] = await Promise.all([
+        all(`SELECT created_at FROM checkins WHERE patient_id = @patientId ORDER BY created_at DESC LIMIT 1`, { patientId: p.id }),
+        all(`SELECT created_at FROM sleep_logs WHERE patient_id = @patientId ORDER BY created_at DESC LIMIT 1`, { patientId: p.id }),
+        all(`SELECT created_at FROM journal_entries WHERE patient_id = @patientId ORDER BY created_at DESC LIMIT 1`, { patientId: p.id })
+      ]);
 
+      let lastActivityDate = null;
+      const dates = [];
+      if (lastCheckin.length > 0) dates.push(new Date(normalizeDate(lastCheckin[0].created_at)));
+      if (lastSleep.length > 0) dates.push(new Date(normalizeDate(lastSleep[0].created_at)));
+      if (lastJournal.length > 0) dates.push(new Date(normalizeDate(lastJournal[0].created_at)));
+      if (dates.length > 0) {
+        lastActivityDate = new Date(Math.max(...dates));
+      }
+
+      // Determine update status based on days since last activity
+      let updateStatus = 'sem_dados';
+      let daysSinceUpdate = null;
+      if (lastActivityDate) {
+        const now = new Date();
+        const diffMs = now - lastActivityDate;
+        daysSinceUpdate = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        if (daysSinceUpdate <= 2) updateStatus = 'verde';
+        else if (daysSinceUpdate <= 7) updateStatus = 'amarelo';
+        else updateStatus = 'vermelho';
+      }
+
+      // Emotional status (based on avg score)
       let status = 'sem_dados';
       if (avgScore >= 7) status = 'estavel';
       else if (avgScore >= 5) status = 'atencao';
@@ -60,7 +84,9 @@ const getPatients = async (req, res) => {
         ...p,
         is_active: p.is_active === undefined ? 1 : p.is_active,
         avg_score: avgScore,
-        last_activity: lastActivity.length > 0 ? normalizeDate(lastActivity[0].created_at) : normalizeDate(p.created_at),
+        last_activity: lastActivityDate ? lastActivityDate.toISOString() : null,
+        days_since_update: daysSinceUpdate,
+        update_status: updateStatus,
         status
       });
     }

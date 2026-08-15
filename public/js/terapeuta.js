@@ -255,23 +255,82 @@ function renderPatientList(filterText = '') {
   container.innerHTML = html;
 }
 
+
+// ============================================================
+// Update status visual indicators
+// ============================================================
+function getUpdateStatusInfo(p) {
+  var status = p.update_status || 'sem_dados';
+  var days = p.days_since_update;
+
+  // Calculate days if not provided
+  if (days === null || days === undefined) {
+    if (p.last_activity) {
+      var diff = Date.now() - new Date(p.last_activity).getTime();
+      days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      if (days <= 2) status = 'verde';
+      else if (days <= 7) status = 'amarelo';
+      else status = 'vermelho';
+    } else {
+      status = 'sem_dados';
+    }
+  }
+
+  var info = {
+    'verde':    { color: 'bg-green-500',   text: 'text-green-600',   border: 'border-l-green-500',  label: 'Atualizado' },
+    'amarelo':  { color: 'bg-yellow-500',  text: 'text-yellow-600',  border: 'border-l-yellow-500', label: 'Atenção' },
+    'vermelho': { color: 'bg-rose-500',    text: 'text-rose-600',    border: 'border-l-rose-500',    label: 'Atrasado' },
+    'sem_dados':{ color: 'bg-slate-300',   text: 'text-slate-400',   border: 'border-l-slate-300',  label: 'Sem dados' }
+  };
+
+  var result = info[status] || info['sem_dados'];
+  result.status = status;
+  result.days = days;
+  result.timeAgo = formatTimeAgo(days);
+  return result;
+}
+
+function formatTimeAgo(days) {
+  if (days === null || days === undefined) return 'Sem registros';
+  if (days === 0) return 'Hoje';
+  if (days === 1) return 'Há 1 dia';
+  if (days <= 7) return 'Há ' + days + ' dias';
+  if (days <= 30) return 'Há ' + Math.floor(days / 7) + ' sem.';
+  return 'Há ' + Math.floor(days / 30) + ' mês';
+}
+
 // Render a single patient card
 function renderPatientCard(p) {
   const isSelected = p.id === selectedPatientId;
   const isActive = p.is_active !== 0;
   
+  // Emotional status dot (wellness score)
   let dotColorClass = 'bg-emerald-500';
   if (p.avg_score < 5) dotColorClass = 'bg-rose-500';
   else if (p.avg_score < 7) dotColorClass = 'bg-amber-500';
 
-  const opacityClass = isActive ? '' : 'opacity-55';
-  const statusBadge = isActive 
+  // Update status indicator (when was last emotional update)
+  var updateInfo = getUpdateStatusInfo(p);
+  
+  var selectedBorder = isSelected ? '' : (updateInfo.status === 'verde' ? 'border-l-4 ' + updateInfo.border : '');
+  var opacityClass = isActive ? '' : 'opacity-55';
+  var statusBadge = isActive 
     ? '' 
     : `<span class="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Inativo</span>`;
 
+  // Build update indicator text
+  var updateIndicator = '';
+  if (isActive) {
+    var updateColor = isSelected ? 'text-amber-200' : updateInfo.text;
+    var dotColor = updateInfo.color;
+    updateIndicator = `<span class="text-[10px] ${updateColor} flex items-center gap-1 mt-0.5">
+      <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>${updateInfo.timeAgo}
+    </span>`;
+  }
+
   return `
     <div onclick="selectPatient('${escapeHtml(p.id)}')" 
-      class="p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${opacityClass} ${
+      class="p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${opacityClass} ${selectedBorder} ${
         isSelected 
           ? 'bg-teal-700 text-white border-teal-800 shadow-sm' 
           : 'bg-white hover:bg-teal-50/80 border-teal-100 text-slate-800'
@@ -286,6 +345,7 @@ function renderPatientCard(p) {
         <div class="text-left">
           <span class="block text-xs font-bold ${isSelected ? 'text-white' : 'text-teal-950'} line-clamp-1">${escapeHtml(p.name)}</span>
           ${statusBadge || `<span class="text-[10px] ${isSelected ? 'text-teal-200' : 'text-slate-400'}">Média: ${escapeHtml(p.avg_score.toFixed(1))}/10</span>`}
+          ${updateIndicator}
         </div>
       </div>
       <i class="fa-solid fa-chevron-right text-[10px] ${isSelected ? 'text-amber-300' : 'text-slate-300'}"></i>

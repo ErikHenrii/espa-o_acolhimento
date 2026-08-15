@@ -127,8 +127,21 @@
             </button>
           </div>
 
+          <!-- Update Status Legend -->
+          <div class="flex items-center gap-3 px-1 py-2 text-[9px] text-slate-500">
+            <span class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-green-500"></span> Atualizado (0-2d)
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-yellow-500"></span> Atenção (3-7d)
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-rose-500"></span> Atrasado (+7d)
+            </span>
+          </div>
+
           <!-- Patient Cards Container -->
-          <div id="patient-list" class="space-y-2 max-h-[calc(100vh-310px)] overflow-y-auto pr-1">
+          <div id="patient-list" class="space-y-2 max-h-[calc(100vh-330px)] overflow-y-auto pr-1">
             <!-- Rendered dynamically by terapeuta.js -->
             <div class="p-4 text-center text-xs text-slate-400">Carregando pacientes...</div>
           </div>
