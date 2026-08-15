@@ -146,15 +146,11 @@ async function fetchPatients() {
   renderPatientList();
   renderMobilePatientSelect();
 
-  // Show dashboard landing page instead of auto-selecting first patient
-  if (patientsList.length > 0) {
-    selectedPatientId = null;
-    showEmptyState(true);
-    renderDashboard();
-  } else {
-    showEmptyState(true);
-    renderDashboard();
-  }
+  // Show dashboard landing page — NEVER auto-select first patient
+  selectedPatientId = null;
+  selectedPatientData = null;
+  showEmptyState(true);
+  renderDashboard();
 }
 
 // Mock patients dataset for local offline testing
