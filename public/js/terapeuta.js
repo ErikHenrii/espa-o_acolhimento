@@ -730,6 +730,22 @@ function renderDashboard() {
   }
 }
 
+// ============================================================
+// Back to Dashboard Landing Page
+// ============================================================
+function backToDashboard() {
+  selectedPatientId = null;
+  selectedPatientData = null;
+  showEmptyState(true);
+  renderDashboard();
+  renderPatientList();
+  renderMobilePatientSelect();
+  // Reset mobile dropdown
+  var selectMobile = document.getElementById('patient-select-mobile');
+  if (selectMobile) selectMobile.value = '';
+}
+window.backToDashboard = backToDashboard;
+
 function showEmptyState(show) {
   const emptyView = document.getElementById('empty-state-view');
   const detailsView = document.getElementById('patient-details-view');
