@@ -28,7 +28,7 @@ function validatePassword(password) {
 // ============================================================
 const register = async (req, res) => {
   try {
-    let { name, email, password, role, specialty } = req.body;
+    let { name, email, password, role, specialty, whatsapp } = req.body;
 
     name = sanitizeString(name);
     email = sanitizeString(email).toLowerCase();
@@ -70,19 +70,20 @@ const register = async (req, res) => {
     // Validate role
     const finalRole = (role === 'terapeuta') ? 'terapeuta' : 'paciente';
     const finalSpecialty = sanitizeString(specialty || 'Psicologia');
+    const finalWhatsapp = sanitizeString(whatsapp || '');
 
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
     const userId = crypto.randomUUID();
 
     await run(
-      `INSERT INTO users (id, name, email, password_hash, role, must_change_credentials, specialty)
-       VALUES (@id, @name, @email, @passwordHash, @role, @mustChange, @specialty)`,
-      { id: userId, name, email, passwordHash, role: finalRole, mustChange: finalRole === 'terapeuta' ? 1 : 0, specialty: finalSpecialty }
+      `INSERT INTO users (id, name, email, password_hash, role, must_change_credentials, specialty, whatsapp)
+       VALUES (@id, @name, @email, @passwordHash, @role, @mustChange, @specialty, @whatsapp)`,
+      { id: userId, name, email, passwordHash, role: finalRole, mustChange: finalRole === 'terapeuta' ? 1 : 0, specialty: finalSpecialty, whatsapp: finalWhatsapp }
     );
 
     const newUser = await get(
-      'SELECT id, name, email, role, must_change_credentials, specialty, created_at FROM users WHERE id = @id',
+      'SELECT id, name, email, role, must_change_credentials, specialty, whatsapp, created_at FROM users WHERE id = @id',
       { id: userId }
     );
 
@@ -141,7 +142,7 @@ const login = async (req, res) => {
     }
 
     const user = await get(
-      'SELECT id, name, email, password_hash, role, must_change_credentials, specialty, created_at FROM users WHERE email = @email',
+      'SELECT id, name, email, password_hash, role, must_change_credentials, specialty, whatsapp, created_at FROM users WHERE email = @email',
       { email }
     );
 
@@ -203,7 +204,7 @@ const login = async (req, res) => {
 const updateCredentials = async (req, res) => {
   try {
     const userId = req.user.id;
-    let { current_password, new_email, new_password } = req.body;
+    let { current_password, new_email, new_password, new_specialty, new_whatsapp } = req.body;
 
     current_password = typeof current_password === 'string' ? current_password : '';
     new_email = new_email ? sanitizeString(new_email).toLowerCase() : null;
@@ -278,6 +279,22 @@ const updateCredentials = async (req, res) => {
       params.newHash = newHash;
     }
 
+    // Update specialty if provided
+    if (new_specialty !== undefined) {
+      const spec = sanitizeString(new_specialty);
+      if (spec.length > 0) {
+        updates.push('specialty = @newSpecialty');
+        params.newSpecialty = spec;
+      }
+    }
+
+    // Update whatsapp if provided
+    if (new_whatsapp !== undefined) {
+      const wa = sanitizeString(new_whatsapp);
+      updates.push('whatsapp = @newWhatsapp');
+      params.newWhatsapp = wa;
+    }
+
     updates.push('must_change_credentials = 0');
 
     if (updates.length > 1) {
@@ -290,7 +307,7 @@ const updateCredentials = async (req, res) => {
     }
 
     const updatedUser = await get(
-      'SELECT id, name, email, role, must_change_credentials, specialty, created_at FROM users WHERE id = @id',
+      'SELECT id, name, email, role, must_change_credentials, specialty, whatsapp, created_at FROM users WHERE id = @id',
       { id: userId }
     );
 

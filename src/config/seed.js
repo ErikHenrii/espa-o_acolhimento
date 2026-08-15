@@ -14,6 +14,7 @@ async function seedTherapist() {
   const therapistName = process.env.THERAPIST_NAME || 'Jaqueline Camila';
   const therapistPassword = process.env.THERAPIST_PASSWORD || 'jac123456';
   const therapistSpecialty = process.env.THERAPIST_SPECIALTY || 'Psicologia';
+  const therapistWhatsapp = process.env.THERAPIST_WHATSAPP || '';
 
   const existing = await get(
     'SELECT id, must_change_credentials FROM users WHERE email = @email',
@@ -29,9 +30,9 @@ async function seedTherapist() {
   const id = crypto.randomUUID();
 
   await run(
-    `INSERT INTO users (id, name, email, password_hash, role, must_change_credentials, specialty)
-     VALUES (@id, @name, @email, @passwordHash, @role, @mustChange, @specialty)`,
-    { id, name: therapistName, email: therapistEmail, passwordHash, role: 'terapeuta', mustChange: 1, specialty: therapistSpecialty }
+    `INSERT INTO users (id, name, email, password_hash, role, must_change_credentials, specialty, whatsapp)
+     VALUES (@id, @name, @email, @passwordHash, @role, @mustChange, @specialty, @whatsapp)`,
+    { id, name: therapistName, email: therapistEmail, passwordHash, role: 'terapeuta', mustChange: 1, specialty: therapistSpecialty, whatsapp: therapistWhatsapp }
   );
 
   console.log('========================================');

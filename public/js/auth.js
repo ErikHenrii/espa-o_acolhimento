@@ -169,6 +169,26 @@
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Atualizando...';
 
+      // Build request body with optional specialty + whatsapp
+      var bodyData = {
+        current_password: currentPass,
+        new_email: newEmail || undefined,
+        new_password: newPass || undefined
+      };
+
+      // Add whatsapp if provided
+      var waInput = document.getElementById('cred-new-whatsapp');
+      if (waInput && waInput.value.trim()) {
+        bodyData.new_whatsapp = waInput.value.trim();
+      }
+
+      // Add specialty if the field exists (therapists only)
+      var specSelect = document.getElementById('cred-new-specialty');
+      var specField = document.getElementById('cred-specialty-field');
+      if (specSelect && specField && !specField.classList.contains('hidden')) {
+        bodyData.new_specialty = specSelect.value;
+      }
+
       try {
         var token = localStorage.getItem('espaco_token');
         var res = await fetch(API_BASE + '/auth/update-credentials', {
@@ -177,11 +197,7 @@
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + token
           },
-          body: JSON.stringify({
-            current_password: currentPass,
-            new_email: newEmail || undefined,
-            new_password: newPass || undefined
-          })
+          body: JSON.stringify(bodyData)
         });
 
         if (res.ok) {
@@ -205,6 +221,16 @@
           document.getElementById('cred-new-email').value = '';
           document.getElementById('cred-new-password').value = '';
           document.getElementById('cred-confirm-password').value = '';
+          var waClear = document.getElementById('cred-new-whatsapp');
+          if (waClear) waClear.value = '';
+
+          // Refresh therapist header if on terapeuta page
+          var specLabel = document.getElementById('therapist-specialty-label');
+          if (specLabel && data.user.specialty) {
+            specLabel.textContent = data.user.name + ' • ' + data.user.specialty;
+          }
+          var therapistNameEl = document.getElementById('therapist-name');
+          if (therapistNameEl) therapistNameEl.textContent = data.user.name;
 
           // Redirect if pending
           if (pendingRedirect) {
@@ -235,6 +261,27 @@
     }
     // Initialize credential modal handler on ANY page that has the modal
     if (document.getElementById('credential-modal')) {
+      // Show specialty field for therapists
+      var userJson = localStorage.getItem('espaco_user');
+      if (userJson) {
+        try {
+          var u = JSON.parse(userJson);
+          if (u.role === 'terapeuta') {
+            var specField = document.getElementById('cred-specialty-field');
+            if (specField) specField.classList.remove('hidden');
+            // Pre-select current specialty
+            var specSel = document.getElementById('cred-new-specialty');
+            if (specSel && u.specialty) {
+              for (var i = 0; i < specSel.options.length; i++) {
+                if (specSel.options[i].value === u.specialty) { specSel.selectedIndex = i; break; }
+              }
+            }
+            // Pre-fill current whatsapp
+            var waInput = document.getElementById('cred-new-whatsapp');
+            if (waInput && u.whatsapp) waInput.value = u.whatsapp;
+          }
+        } catch (e) {}
+      }
       handleCredentialSubmit();
       // Set up close button and overlay click
       var closeBtn = document.getElementById('cred-close');
@@ -433,6 +480,9 @@
       var specialty = '';
       var specSelect = document.getElementById('reg-specialty');
       if (specSelect) specialty = specSelect.value;
+      var whatsapp = '';
+      var waInput = document.getElementById('reg-whatsapp');
+      if (waInput) whatsapp = waInput.value.trim();
 
       try {
         var res = await fetch(API_BASE + '/auth/register', {
@@ -441,7 +491,8 @@
           body: JSON.stringify({
             name: name, email: email, password: password,
             role: currentRole,
-            specialty: currentRole === 'terapeuta' ? specialty : undefined
+            specialty: currentRole === 'terapeuta' ? specialty : undefined,
+            whatsapp: whatsapp || undefined
           })
         });
 

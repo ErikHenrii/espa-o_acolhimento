@@ -27,7 +27,7 @@ function normalizeDate(dateStr) {
 const getPatients = async (req, res) => {
   try {
     const patients = await all(
-      `SELECT id, name, email, created_at, is_active
+      `SELECT id, name, email, created_at, is_active, whatsapp
        FROM users
        WHERE role = 'paciente'
        ORDER BY name ASC`,
@@ -86,7 +86,7 @@ const getPatientHistory = async (req, res) => {
     const { id } = req.params;
 
     const patient = await get(
-      `SELECT id, name, email, created_at, is_active, specialty
+      `SELECT id, name, email, created_at, is_active, specialty, whatsapp
        FROM users
        WHERE id = @id AND role = 'paciente'`,
       { id }

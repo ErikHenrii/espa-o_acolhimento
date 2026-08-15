@@ -435,6 +435,17 @@ function renderPatientOverview() {
   document.getElementById('overview-avatar').textContent = p.name ? p.name.charAt(0) : 'P';
   document.getElementById('overview-name').textContent = p.name;
   document.getElementById('overview-email').textContent = p.email;
+
+  // Display whatsapp
+  var waEl = document.getElementById('overview-whatsapp');
+  if (waEl) {
+    if (p.whatsapp) {
+      waEl.classList.remove('hidden');
+      waEl.innerHTML = '<i class="fa-brands fa-whatsapp text-xs mr-1"></i>' + escapeHtml(p.whatsapp);
+    } else {
+      waEl.classList.add('hidden');
+    }
+  }
   document.getElementById('overview-since').textContent = `Cadastrado(a) em ${formatDateShort(p.created_at)}`;
 
   // Active/inactive pill
@@ -650,7 +661,7 @@ function renderSleepRecords() {
 }
 
 // ============================================================
-// Export Patient Data as PDF
+// Export Patient Data as PDF (with charts)
 // ============================================================
 function exportPatientPDF() {
   const p = selectedPatientData.overview || patientsList.find(x => x.id === selectedPatientId);
@@ -663,31 +674,100 @@ function exportPatientPDF() {
   const sleep = selectedPatientData.sleep || [];
   const journals = selectedPatientData.journals || [];
 
-  // Build a printable HTML document
   const now = new Date();
   const reportDate = formatPortugueseDate(now.toISOString());
 
-  let html = '<!DOCTYPE html><html lang="pt-BBR"><head><meta charset="UTF-8">';
-  html += '<title>Relatório - ' + escapeHtml(p.name) + '</title>';
+  // Capture SVG charts from the page
+  var moodChartSVG = '';
+  var moodContainer = document.getElementById('therapist-mood-chart');
+  if (moodContainer) {
+    var svgEl = moodContainer.querySelector('svg');
+    if (svgEl) {
+      moodChartSVG = svgEl.outerHTML;
+    }
+  }
+
+  var sleepChartSVG = '';
+  var sleepContainer = document.getElementById('therapist-sleep-chart');
+  if (sleepContainer) {
+    var svgEl = sleepContainer.querySelector('svg');
+    if (svgEl) {
+      sleepChartSVG = svgEl.outerHTML;
+    }
+  }
+
+  // Build mood data for embedded chart (fallback if SVG not available)
+  var moodData = checkins.slice(0, 30).reverse();
+  var sleepData = sleep.slice(0, 30).reverse();
+
+  // Build mood chart SVG if not captured from page
+  if (!moodChartSVG && moodData.length > 0) {
+    var svgW = 500, svgH = 200, padX = 40, padY = 25;
+    var pts = moodData.map(function(d, idx) {
+      var x = padX + (idx / Math.max(1, moodData.length - 1)) * (svgW - padX * 2);
+      var y = svgH - padY - ((d.score - 1) / 9) * (svgH - padY * 2);
+      return { x: x, y: y, score: d.score, date: formatDateShort(d.created_at) };
+    });
+    var poly = pts.map(function(p) { return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ');
+    var dots = pts.map(function(p) {
+      return '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="4" fill="#0f766e" stroke="#fff" stroke-width="2"/>' +
+             '<text x="' + p.x.toFixed(1) + '" y="' + (p.y - 8).toFixed(1) + '" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f766e">' + p.score + '</text>' +
+             '<text x="' + p.x.toFixed(1) + '" y="' + (svgH - 5) + '" text-anchor="middle" font-size="7" fill="#64748b">' + p.date + '</text>';
+    }).join('');
+    moodChartSVG = '<svg viewBox="0 0 ' + svgW + ' ' + svgH + '" style="width:100%;height:auto;">' +
+      '<line x1="' + padX + '" y1="' + padY + '" x2="' + (svgW - padX) + '" y2="' + padY + '" stroke="#ccfbf1" stroke-dasharray="3,3"/>' +
+      '<line x1="' + padX + '" y1="' + (svgH/2) + '" x2="' + (svgW - padX) + '" y2="' + (svgH/2) + '" stroke="#ccfbf1" stroke-dasharray="3,3"/>' +
+      '<line x1="' + padX + '" y1="' + (svgH - padY) + '" x2="' + (svgW - padX) + '" y2="' + (svgH - padY) + '" stroke="#ccfbf1" stroke-dasharray="3,3"/>' +
+      '<polyline fill="none" stroke="#14b8a6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="' + poly + '"/>' +
+      dots + '</svg>';
+  }
+
+  // Build sleep chart SVG if not captured
+  if (!sleepChartSVG && sleepData.length > 0) {
+    var svgW2 = 500, svgH2 = 200, padX2 = 40, padY2 = 25;
+    var maxHours = 12;
+    var barW = Math.max(8, (svgW2 - padX2 * 2) / sleepData.length - 6);
+    var bars = sleepData.map(function(d, idx) {
+      var x = padX2 + idx * ((svgW2 - padX2 * 2) / sleepData.length) + 3;
+      var bh = (d.hours / maxHours) * (svgH2 - padY2 * 2);
+      var y = svgH2 - padY2 - bh;
+      return '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="3" fill="#6366f1" opacity="0.8"/>' +
+             '<text x="' + (x + barW/2).toFixed(1) + '" y="' + (y - 4).toFixed(1) + '" text-anchor="middle" font-size="8" font-weight="bold" fill="#4338ca">' + d.hours + 'h</text>' +
+             '<text x="' + (x + barW/2).toFixed(1) + '" y="' + (svgH2 - 5) + '" text-anchor="middle" font-size="7" fill="#64748b">' + formatDateShort(d.created_at) + '</text>';
+    }).join('');
+    sleepChartSVG = '<svg viewBox="0 0 ' + svgW2 + ' ' + svgH2 + '" style="width:100%;height:auto;">' +
+      '<line x1="' + padX2 + '" y1="' + padY2 + '" x2="' + (svgW2 - padX2) + '" y2="' + padY2 + '" stroke="#e0e7ff" stroke-dasharray="3,3"/>' +
+      '<line x1="' + padX2 + '" y1="' + (svgH2/2) + '" x2="' + (svgW2 - padX2) + '" y2="' + (svgH2/2) + '" stroke="#e0e7ff" stroke-dasharray="3,3"/>' +
+      '<line x1="' + padX2 + '" y1="' + (svgH2 - padY2) + '" x2="' + (svgW2 - padX2) + '" y2="' + (svgH2 - padY2) + '" stroke="#e0e7ff" stroke-dasharray="3,3"/>' +
+      bars + '</svg>';
+  }
+
+  var html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">';
+  html += '<title>Relatorio - ' + escapeHtml(p.name) + '</title>';
   html += '<style>';
-  html += '@page { margin: 2cm; }';
+  html += '@page { margin: 1.5cm; }';
   html += 'body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }';
   html += 'h1 { color: #0f766e; font-size: 20px; border-bottom: 2px solid #14b8a6; padding-bottom: 8px; }';
-  html += 'h2 { color: #0f766e; font-size: 14px; margin-top: 20px; }';
-  html += '.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }';
+  html += 'h2 { color: #0f766e; font-size: 14px; margin-top: 24px; margin-bottom: 8px; }';
+  html += '.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }';
   html += '.header-info { font-size: 11px; color: #666; text-align: right; }';
   html += '.patient-card { background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 8px; padding: 12px; margin: 12px 0; }';
-  html += '.stats { display: flex; gap: 20px; margin: 12px 0; }';
-  html += '.stat { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 16px; text-align: center; }';
+  html += '.stats { display: flex; gap: 16px; margin: 12px 0; }';
+  html += '.stat { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 16px; text-align: center; flex: 1; }';
   html += '.stat strong { display: block; font-size: 18px; color: #0f766e; }';
   html += '.stat span { font-size: 10px; color: #64748b; text-transform: uppercase; }';
+  html += '.chart-container { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin: 12px 0; }';
+  html += '.chart-container svg { max-width: 100%; height: auto; }';
+  html += '.charts-row { display: flex; gap: 16px; flex-wrap: wrap; }';
+  html += '.chart-col { flex: 1; min-width: 300px; }';
   html += 'table { width: 100%; border-collapse: collapse; margin: 8px 0; }';
   html += 'th { background: #f0fdfa; color: #0f766e; font-size: 11px; text-align: left; padding: 6px 8px; border-bottom: 2px solid #99f6e4; }';
-  html += 'td { font-size: 11px; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }';
+  html += 'td { font-size: 10px; padding: 5px 8px; border-bottom: 1px solid #e2e8f0; }';
   html += '.footer { margin-top: 30px; font-size: 10px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 10px; }';
   html += '.badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; }';
   html += '.badge-active { background: #d1fae5; color: #065f46; }';
   html += '.badge-inactive { background: #f1f5f9; color: #64748b; }';
+  html += '@media print { body { -webkit-print-color-adjust: exact; } }';
   html += '</style></head><body>';
 
   html += '<div class="header">';
@@ -697,9 +777,12 @@ function exportPatientPDF() {
 
   html += '<div class="patient-card">';
   html += '<strong style="font-size:16px;">' + escapeHtml(p.name) + '</strong><br>';
-  html += '<span style="font-size:11px;color:#666;">E-mail: ' + escapeHtml(p.email || '-') + '</span><br>';
-  html += '<span style="font-size:11px;color:#666;">Cadastrado em: ' + escapeHtml(formatDateShort(p.created_at)) + '</span><br>';
-  const isActive = p.is_active !== 0;
+  html += '<span style="font-size:11px;color:#666;">E-mail: ' + escapeHtml(p.email || '-') + '</span>';
+  if (p.whatsapp) {
+    html += '<br><span style="font-size:11px;color:#666;">WhatsApp: ' + escapeHtml(p.whatsapp) + '</span>';
+  }
+  html += '<br><span style="font-size:11px;color:#666;">Cadastrado em: ' + escapeHtml(formatDateShort(p.created_at)) + '</span><br>';
+  var isActive = p.is_active !== 0;
   html += '<span class="badge ' + (isActive ? 'badge-active' : 'badge-inactive') + '">' + (isActive ? 'Ativo' : 'Inativo') + '</span>';
   html += '</div>';
 
@@ -710,13 +793,24 @@ function exportPatientPDF() {
   html += '<div class="stat"><strong>' + escapeHtml(String((p.avg_score || 0).toFixed(1))) + '</strong><span>Média Humor</span></div>';
   html += '</div>';
 
+  // Charts section
+  html += '<h2>Gráficos de Evolução (30 Dias)</h2>';
+  html += '<div class="charts-row">';
+  html += '<div class="chart-col"><div class="chart-container"><strong style="font-size:12px;color:#0f766e;">Evolução do Humor</strong><br>';
+  if (moodChartSVG) { html += moodChartSVG; } else { html += '<p style="font-size:11px;color:#999;">Sem dados de humor.</p>'; }
+  html += '</div></div>';
+  html += '<div class="chart-col"><div class="chart-container"><strong style="font-size:12px;color:#0f766e;">Horas de Sono</strong><br>';
+  if (sleepChartSVG) { html += sleepChartSVG; } else { html += '<p style="font-size:11px;color:#999;">Sem dados de sono.</p>'; }
+  html += '</div></div>';
+  html += '</div>';
+
   // Check-ins table
   html += '<h2>Últimos Check-ins</h2>';
   if (checkins.length === 0) {
     html += '<p style="font-size:11px;color:#999;">Nenhum check-in registrado.</p>';
   } else {
     html += '<table><thead><tr><th>Data</th><th>Humor</th><th>Pontuação</th><th>Gatilhos</th><th>Notas</th></tr></thead><tbody>';
-    checkins.slice(0, 30).forEach(c => {
+    checkins.slice(0, 30).forEach(function(c) {
       html += '<tr>';
       html += '<td>' + escapeHtml(formatPortugueseDate(c.created_at)) + '</td>';
       html += '<td>' + escapeHtml(c.mood || '-') + '</td>';
@@ -734,7 +828,7 @@ function exportPatientPDF() {
     html += '<p style="font-size:11px;color:#999;">Nenhum registro de sono.</p>';
   } else {
     html += '<table><thead><tr><th>Data</th><th>Horas</th><th>Qualidade</th><th>Notas</th></tr></thead><tbody>';
-    sleep.slice(0, 30).forEach(s => {
+    sleep.slice(0, 30).forEach(function(s) {
       html += '<tr>';
       html += '<td>' + escapeHtml(formatPortugueseDate(s.created_at)) + '</td>';
       html += '<td>' + escapeHtml(String(s.hours || '-')) + 'h</td>';
@@ -750,7 +844,7 @@ function exportPatientPDF() {
   if (journals.length === 0) {
     html += '<p style="font-size:11px;color:#999;">Nenhuma entrada compartilhada.</p>';
   } else {
-    journals.slice(0, 20).forEach(j => {
+    journals.slice(0, 20).forEach(function(j) {
       html += '<div style="background:#fefce8;border:1px solid #fef08a;border-radius:6px;padding:8px;margin:6px 0;">';
       html += '<strong style="font-size:11px;">' + escapeHtml(formatPortugueseDate(j.created_at)) + '</strong><br>';
       html += '<span style="font-size:11px;">' + escapeHtml((j.content || '').substring(0, 500)) + '</span>';
@@ -758,17 +852,14 @@ function exportPatientPDF() {
     });
   }
 
-  html += '<div class="footer">Espaço de Acolhimento — Documento gerado eletronicamente</div>';
+  html += '<div class="footer">Espaço de Acolhimento — Documento gerado eletronicamente em ' + escapeHtml(reportDate) + '</div>';
   html += '</body></html>';
 
-  // Open in new window and print
-  const printWindow = window.open('', '_blank');
+  var printWindow = window.open('', '_blank');
   if (printWindow) {
     printWindow.document.write(html);
     printWindow.document.close();
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
+    setTimeout(function() { printWindow.print(); }, 800);
   } else {
     showToast('Permita pop-ups para exportar o PDF.', 'error');
   }

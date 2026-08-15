@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     must_change_credentials INTEGER NOT NULL DEFAULT 0,
     is_active INTEGER NOT NULL DEFAULT 1,
     specialty TEXT DEFAULT 'Psicologia',
+    whatsapp TEXT DEFAULT '',
     created_at TEXT DEFAULT TO_CHAR(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
 );
 
