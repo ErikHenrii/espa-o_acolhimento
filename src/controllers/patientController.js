@@ -29,6 +29,23 @@ function normalizeDate(dateStr) {
 }
 
 /**
+ * Clear attended status if patient submits new emotional data
+ * (therapist needs to re-review the new data)
+ */
+async function clearAttendedIfToday(patientId) {
+  try {
+    await run(
+      `UPDATE users SET last_attended_at = NULL
+       WHERE id = @patientId AND last_attended_at IS NOT NULL`,
+      { patientId }
+    );
+  } catch (e) {
+    // Non-critical — don't fail the check-in if this fails
+    console.warn('Could not clear attended status:', e.message);
+  }
+}
+
+/**
  * Get all data for the authenticated patient
  * Returns: { checkins, sleep, journals } with frontend-friendly field aliases
  */

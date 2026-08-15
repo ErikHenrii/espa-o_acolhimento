@@ -330,7 +330,7 @@ function getUpdateStatusInfo(p) {
 
   var info = {
     'verde':    { color: 'bg-green-500',   text: 'text-green-600',   border: 'border-l-green-500',  label: 'Atualizado' },
-    'amarelo':  { color: 'bg-yellow-500',  text: 'text-yellow-600',  border: 'border-l-yellow-500', label: 'Atenção' },
+    'amarelo':  { color: 'bg-orange-500',  text: 'text-orange-600',  border: 'border-l-orange-500', label: 'Atenção' },
     'vermelho': { color: 'bg-rose-500',    text: 'text-rose-600',    border: 'border-l-rose-500',    label: 'Atrasado' },
     'sem_dados':{ color: 'bg-slate-300',   text: 'text-slate-400',   border: 'border-l-slate-300',  label: 'Sem dados' }
   };
@@ -378,7 +378,7 @@ function renderPatientCard(p) {
   var newBadge = '';
   if (hasNewData && isActive) {
     newBadge = `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-rose-400/30 text-rose-200' : 'bg-rose-100 text-rose-600'} flex items-center gap-1 mt-0.5 w-fit">
-      <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span> Novos dados
+      <i class="fa-solid fa-circle-dot text-[8px]"></i> Novos dados
     </span>`;
   }
 
@@ -398,9 +398,15 @@ function renderPatientCard(p) {
     </span>`;
   }
 
+  var pulseClass = '';
+  var cardBorderHighlight = '';
+  if (hasNewData && !isSelected && isActive) {
+    pulseClass = 'animate-pulse-card ring-2 ring-rose-300 border-rose-300';
+  }
+
   return `
     <div onclick="selectPatient('${escapeHtml(p.id)}')" 
-      class="p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${opacityClass} ${selectedBorder} ${
+      class="p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${opacityClass} ${selectedBorder} ${pulseClass} ${
         isSelected 
           ? 'bg-teal-700 text-white border-teal-800 shadow-sm' 
           : 'bg-white hover:bg-teal-50/80 border-teal-100 text-slate-800'
@@ -412,7 +418,6 @@ function renderPatientCard(p) {
           </div>
           <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${dotColorClass}"></span>
           ${attendedToday ? `<span class="absolute -top-1 -left-1 w-4 h-4 rounded-full ${isSelected ? 'bg-amber-400 text-teal-900' : 'bg-indigo-500 text-white'} flex items-center justify-center text-[8px] shadow-sm"><i class="fa-solid fa-check"></i></span>` : ''}
-          ${hasNewData && !attendedToday ? `<span class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-rose-500 border-2 border-white animate-pulse"></span>` : ''}
         </div>
         <div class="text-left">
           <span class="block text-xs font-bold ${isSelected ? 'text-white' : 'text-teal-950'} line-clamp-1">${escapeHtml(p.name)}</span>
@@ -501,7 +506,7 @@ function applyDataHighlights(overview) {
   sections.forEach(function(sid) {
     var el = document.getElementById(sid);
     if (el) {
-      el.classList.remove('bg-teal-50', 'bg-indigo-50', 'bg-amber-50', 'border-teal-400', 'border-indigo-400', 'border-amber-400', 'ring-2', 'ring-teal-200', 'ring-indigo-200', 'ring-amber-200');
+      el.classList.remove('bg-teal-50', 'bg-indigo-50', 'bg-violet-50', 'border-teal-400', 'border-indigo-400', 'border-violet-400', 'ring-2', 'ring-teal-200', 'ring-indigo-200', 'ring-violet-200');
     }
   });
 
@@ -526,7 +531,7 @@ function applyDataHighlights(overview) {
   // Highlight journal section if new journal entries
   if (overview.has_new_journals) {
     var journalEl = document.getElementById('section-journals');
-    if (journalEl) { journalEl.classList.add('bg-amber-50', 'border-amber-300', 'ring-2', 'ring-amber-200'); }
+    if (journalEl) { journalEl.classList.add('bg-violet-50', 'border-violet-300', 'ring-2', 'ring-violet-200'); }
   }
 }
 

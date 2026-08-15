@@ -833,3 +833,17 @@ input[type="checkbox"]:focus,
 input[type="radio"]:focus {
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
 }
+
+
+/* Card pulse animation for new data indicator */
+@keyframes pulse-card {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.12);
+  }
+}
+.animate-pulse-card {
+  animation: pulse-card 1.8s ease-in-out infinite;
+}
