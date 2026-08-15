@@ -339,6 +339,25 @@ function renderMiniMoodChart() {
   `;
 }
 
+
+// ============================================================
+// Render Mood Character Grid (Check-in tab)
+// Uses MoodCharacters from mood-characters.js
+// ============================================================
+function renderMoodGrid() {
+  const grid = document.getElementById('mood-selector-grid');
+  if (!grid || typeof MoodCharacters === 'undefined') return;
+
+  const moods = MoodCharacters.getMoodList();
+  grid.innerHTML = moods.map(m => `
+    <button type="button" class="mood-btn p-3 rounded-2xl bg-white border border-linen text-center transition-all hover:shadow-sm"
+      data-mood="${escapeHtml(m.name)}" data-score="${m.score}">
+      <img src="${MoodCharacters.getPath(m.name)}" width="48" height="48" alt="${escapeHtml(m.name)}" loading="lazy" class="mx-auto mb-1.5 rounded-lg" />
+      <span class="text-[11px] font-bold text-charcoal block">${escapeHtml(m.name)}</span>
+    </button>
+  `).join('');
+}
+
 // Initialize Interactive Controls
 function initControls() {
   // Check-in Mood Buttons
@@ -720,6 +739,7 @@ function renderHistoryTimeline() {
 // On Page Load
 document.addEventListener('DOMContentLoaded', () => {
   if (checkAuth()) {
+    renderMoodGrid();
     fetchPatientData();
     initControls();
   }
