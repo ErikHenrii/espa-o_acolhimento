@@ -281,6 +281,7 @@ async function markPatientAttended(patientId, event) {
         patient.last_attended_at = data.last_attended_at;
         patient.attended_today = true;
         patient.days_since_attended = 0;
+        // Keep has_new_data as-is; it clears when therapist views the patient
       }
       
       // Also update selectedPatientData overview
@@ -372,6 +373,15 @@ function renderPatientCard(p) {
     </span>`;
   }
 
+  // New data indicator (patient has new emotional data since last view)
+  var hasNewData = p.has_new_data === true;
+  var newBadge = '';
+  if (hasNewData && isActive) {
+    newBadge = `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-rose-400/30 text-rose-200' : 'bg-rose-100 text-rose-600'} flex items-center gap-1 mt-0.5 w-fit">
+      <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span> Novos dados
+    </span>`;
+  }
+
   var selectedBorder = isSelected ? '' : (updateInfo.status === 'verde' ? 'border-l-4 ' + updateInfo.border : '');
   var opacityClass = isActive ? '' : 'opacity-55';
   var statusBadge = isActive 
@@ -402,12 +412,14 @@ function renderPatientCard(p) {
           </div>
           <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${dotColorClass}"></span>
           ${attendedToday ? `<span class="absolute -top-1 -left-1 w-4 h-4 rounded-full ${isSelected ? 'bg-amber-400 text-teal-900' : 'bg-indigo-500 text-white'} flex items-center justify-center text-[8px] shadow-sm"><i class="fa-solid fa-check"></i></span>` : ''}
+          ${hasNewData && !attendedToday ? `<span class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-rose-500 border-2 border-white animate-pulse"></span>` : ''}
         </div>
         <div class="text-left">
           <span class="block text-xs font-bold ${isSelected ? 'text-white' : 'text-teal-950'} line-clamp-1">${escapeHtml(p.name)}</span>
           ${statusBadge || `<span class="text-[10px] ${isSelected ? 'text-teal-200' : 'text-slate-400'}">Média: ${escapeHtml(p.avg_score.toFixed(1))}/10</span>`}
           ${updateIndicator}
           ${attendedBadge}
+          ${newBadge}
         </div>
       </div>
       <i class="fa-solid fa-chevron-right text-[10px] ${isSelected ? 'text-amber-300' : 'text-slate-300'}"></i>
@@ -471,8 +483,77 @@ async function selectPatient(patientId) {
   renderRecentCheckins();
   renderSharedJournals();
   renderSleepRecords();
+
+  // Apply highlights for new data sections
+  applyDataHighlights(selectedPatientData.overview);
+
+  // Mark patient as viewed (resets highlights for next visit)
+  markPatientViewed(patientId);
 }
 window.selectPatient = selectPatient;
+
+// ============================================================
+// Apply visual highlights to sections with new data
+// ============================================================
+function applyDataHighlights(overview) {
+  // Remove all highlights first
+  var sections = ['section-mood-chart', 'section-sleep-chart', 'section-checkins', 'section-journals', 'section-sleep-records'];
+  sections.forEach(function(sid) {
+    var el = document.getElementById(sid);
+    if (el) {
+      el.classList.remove('bg-teal-50', 'bg-indigo-50', 'bg-amber-50', 'border-teal-400', 'border-indigo-400', 'border-amber-400', 'ring-2', 'ring-teal-200', 'ring-indigo-200', 'ring-amber-200');
+    }
+  });
+
+  if (!overview) return;
+
+  // Highlight mood chart + checkins section if new check-ins
+  if (overview.has_new_checkins) {
+    var moodEl = document.getElementById('section-mood-chart');
+    var checkinEl = document.getElementById('section-checkins');
+    if (moodEl) { moodEl.classList.add('bg-teal-50', 'border-teal-300', 'ring-2', 'ring-teal-200'); }
+    if (checkinEl) { checkinEl.classList.add('bg-teal-50', 'border-teal-300', 'ring-2', 'ring-teal-200'); }
+  }
+
+  // Highlight sleep chart + sleep records section if new sleep data
+  if (overview.has_new_sleep) {
+    var sleepChartEl = document.getElementById('section-sleep-chart');
+    var sleepRecEl = document.getElementById('section-sleep-records');
+    if (sleepChartEl) { sleepChartEl.classList.add('bg-indigo-50', 'border-indigo-300', 'ring-2', 'ring-indigo-200'); }
+    if (sleepRecEl) { sleepRecEl.classList.add('bg-indigo-50', 'border-indigo-300', 'ring-2', 'ring-indigo-200'); }
+  }
+
+  // Highlight journal section if new journal entries
+  if (overview.has_new_journals) {
+    var journalEl = document.getElementById('section-journals');
+    if (journalEl) { journalEl.classList.add('bg-amber-50', 'border-amber-300', 'ring-2', 'ring-amber-200'); }
+  }
+}
+
+// ============================================================
+// Mark patient as viewed (silently resets new data flags)
+// ============================================================
+async function markPatientViewed(patientId) {
+  try {
+    await fetch(API_BASE + '/therapist/patient/' + patientId + '/mark-viewed', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + authToken,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    // Update local state so card indicator disappears on next render
+    var patient = patientsList.find(function(p) { return p.id === patientId; });
+    if (patient) {
+      patient.has_new_data = false;
+    }
+  } catch (e) {
+    // Silent fail — non-critical
+    console.warn('markViewed failed:', e);
+  }
+}
+window.markPatientViewed = markPatientViewed;
 
 // Mock patient history generator
 function loadMockPatientHistory(patientId) {

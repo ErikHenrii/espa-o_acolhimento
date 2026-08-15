@@ -144,6 +144,9 @@
             <span class="flex items-center gap-1">
               <i class="fa-solid fa-check text-[8px] text-indigo-500"></i> Atendido hoje
             </span>
+            <span class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-rose-500"></span> Novos dados
+            </span>
           </div>
 
           <!-- Patient Cards Container -->
@@ -235,7 +238,7 @@
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             <!-- Mood Line Chart -->
-            <div class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3">
+            <div id="section-mood-chart" class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3 transition-all duration-500">
               <div class="flex items-center justify-between">
                 <h3 class="text-xs font-bold text-teal-950 uppercase tracking-wider flex items-center gap-2">
                   <i class="fa-solid fa-chart-line text-teal-600"></i>
@@ -249,7 +252,7 @@
             </div>
 
             <!-- Sleep Bar Chart -->
-            <div class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3">
+            <div id="section-sleep-chart" class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3 transition-all duration-500">
               <div class="flex items-center justify-between">
                 <h3 class="text-xs font-bold text-teal-950 uppercase tracking-wider flex items-center gap-2">
                   <i class="fa-solid fa-chart-column text-indigo-600"></i>
@@ -268,7 +271,7 @@
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             <!-- Recent Check-ins Card Column -->
-            <div class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3">
+            <div id="section-checkins" class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3 transition-all duration-500">
               <h3 class="text-xs font-bold text-teal-950 uppercase tracking-wider flex items-center gap-2">
                 <i class="fa-solid fa-heart-pulse text-teal-600"></i>
                 Últimos Check-ins
@@ -279,7 +282,7 @@
             </div>
 
             <!-- Shared Journal Entries Column -->
-            <div class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3">
+            <div id="section-journals" class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3 transition-all duration-500">
               <h3 class="text-xs font-bold text-teal-950 uppercase tracking-wider flex items-center gap-2">
                 <i class="fa-solid fa-book-open text-amber-600"></i>
                 Entradas Compartilhadas do Diário
@@ -290,7 +293,7 @@
             </div>
 
             <!-- Sleep Records Column -->
-            <div class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3">
+            <div id="section-sleep-records" class="glass border border-teal-200/80 rounded-3xl p-5 shadow-sm space-y-3 transition-all duration-500">
               <h3 class="text-xs font-bold text-teal-950 uppercase tracking-wider flex items-center gap-2">
                 <i class="fa-solid fa-moon text-indigo-600"></i>
                 Registros de Sono

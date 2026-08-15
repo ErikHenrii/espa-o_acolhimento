@@ -19,4 +19,7 @@ router.patch('/patient/:id/toggle-status', therapistController.togglePatientStat
 // POST /api/therapist/patient/:id/mark-attended
 router.post('/patient/:id/mark-attended', therapistController.markPatientAttended);
 
+// POST /api/therapist/patient/:id/mark-viewed
+router.post('/patient/:id/mark-viewed', therapistController.markPatientViewed);
+
 module.exports = router;

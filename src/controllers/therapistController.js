@@ -27,7 +27,7 @@ function normalizeDate(dateStr) {
 const getPatients = async (req, res) => {
   try {
     const patients = await all(
-      `SELECT id, name, email, created_at, is_active, whatsapp, last_attended_at
+      `SELECT id, name, email, created_at, is_active, whatsapp, last_attended_at, last_viewed_at
        FROM users
        WHERE role = 'paciente'
        ORDER BY name ASC`,
@@ -90,6 +90,15 @@ const getPatients = async (req, res) => {
         attendedRecently = attendedAgo === 0; // attended today
       }
 
+      // Check for new data since last view
+      let hasNewData = false;
+      if (p.last_viewed_at && lastActivityDate) {
+        const viewedDate = new Date(normalizeDate(p.last_viewed_at));
+        hasNewData = lastActivityDate > viewedDate;
+      } else if (!p.last_viewed_at && lastActivityDate) {
+        hasNewData = true; // never viewed but has data
+      }
+
       patientsWithStats.push({
         ...p,
         is_active: p.is_active === undefined ? 1 : p.is_active,
@@ -100,6 +109,7 @@ const getPatients = async (req, res) => {
         last_attended_at: p.last_attended_at || null,
         attended_today: attendedRecently,
         days_since_attended: attendedAgo,
+        has_new_data: hasNewData,
         status
       });
     }
@@ -125,7 +135,7 @@ const getPatientHistory = async (req, res) => {
     const { id } = req.params;
 
     const patient = await get(
-      `SELECT id, name, email, created_at, is_active, specialty, whatsapp, last_attended_at
+      `SELECT id, name, email, created_at, is_active, specialty, whatsapp, last_attended_at, last_viewed_at
        FROM users
        WHERE id = @id AND role = 'paciente'`,
       { id }
@@ -216,6 +226,28 @@ const getPatientHistory = async (req, res) => {
       attendedToday = daysSinceAttended === 0;
     }
 
+    // Compute per-section new data flags (data newer than last_viewed_at)
+    const viewedDate = patient.last_viewed_at ? new Date(normalizeDate(patient.last_viewed_at)) : null;
+
+    let hasNewCheckins = false;
+    let hasNewSleep = false;
+    let hasNewJournals = false;
+
+    if (checkins.length > 0) {
+      const latestCheckin = new Date(normalizeDate(checkins[0].created_at));
+      hasNewCheckins = viewedDate ? (latestCheckin > viewedDate) : true;
+    }
+    if (sleepRecords.length > 0) {
+      const latestSleep = new Date(normalizeDate(sleepRecords[0].created_at));
+      hasNewSleep = viewedDate ? (latestSleep > viewedDate) : true;
+    }
+    if (journalEntries.length > 0) {
+      const latestJournal = new Date(normalizeDate(journalEntries[0].created_at));
+      hasNewJournals = viewedDate ? (latestJournal > viewedDate) : true;
+    }
+
+    const hasAnyNewData = hasNewCheckins || hasNewSleep || hasNewJournals;
+
     const overview = {
       ...patient,
       created_at: normalizeDate(patient.created_at),
@@ -224,6 +256,10 @@ const getPatientHistory = async (req, res) => {
       last_attended_at: patient.last_attended_at || null,
       attended_today: attendedToday,
       days_since_attended: daysSinceAttended,
+      has_new_checkins: hasNewCheckins,
+      has_new_sleep: hasNewSleep,
+      has_new_journals: hasNewJournals,
+      has_new_data: hasAnyNewData,
       status
     };
 
@@ -317,9 +353,34 @@ const markPatientAttended = async (req, res) => {
   }
 };
 
+// Mark patient as viewed by therapist (resets new data highlights)
+const markPatientViewed = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const nowUTC = new Date().toISOString();
+    await run(
+      `UPDATE users SET last_viewed_at = @now WHERE id = @id AND role = 'paciente'`,
+      { now: nowUTC, id }
+    );
+
+    return res.status(200).json({
+      message: 'Paciente marcado como visualizado.',
+      last_viewed_at: nowUTC
+    });
+  } catch (error) {
+    console.error('Erro ao marcar visualização:', error);
+    return res.status(500).json({
+      error: 'Erro interno',
+      message: 'Não foi possível marcar a visualização.'
+    });
+  }
+};
+
 module.exports = {
   getPatients,
   getPatientHistory,
   togglePatientStatus,
-  markPatientAttended
+  markPatientAttended,
+  markPatientViewed
 };

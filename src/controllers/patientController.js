@@ -147,6 +147,9 @@ const createCheckin = async (req, res) => {
       { id, patientId, date, mood, moodEmoji: mood_emoji, score: scoreInt, triggers: triggersJson, notes }
     );
 
+    // Auto-unmark attended (new emotional data to review)
+    await clearAttendedIfToday(patientId);
+
     return res.status(201).json({
       message: 'Check-in registrado com sucesso!',
       checkin: {
@@ -207,6 +210,9 @@ const createSleep = async (req, res) => {
        VALUES (@id, @patientId, @date, @hours, @sleepQuality, @sleepNotes)`,
       { id, patientId, date, hours: hoursFloat, sleepQuality: qualityStr, sleepNotes: notesStr }
     );
+
+    // Auto-unmark attended (new emotional data to review)
+    await clearAttendedIfToday(patientId);
 
     return res.status(201).json({
       message: 'Registro de sono cadastrado com sucesso!',
@@ -271,6 +277,9 @@ const createJournal = async (req, res) => {
        VALUES (@id, @patientId, @date, @content, @privacy, @audioUrl)`,
       { id, patientId, date, content, privacy: finalPrivacy, audioUrl: audio_url }
     );
+
+    // Auto-unmark attended (new emotional data to review)
+    await clearAttendedIfToday(patientId);
 
     return res.status(201).json({
       message: 'Entrada no diário criada com sucesso!',
