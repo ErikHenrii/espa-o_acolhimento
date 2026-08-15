@@ -1,4 +1,4 @@
-const { all, get } = require('../config/database');
+const { all, get, run } = require('../config/database');
 
 // ============================================================
 // Input sanitization helper
@@ -16,9 +16,9 @@ function sanitizeString(str) {
 const getPatients = async (req, res) => {
   try {
     const patients = await all(
-      `SELECT id, name, email, created_at 
-       FROM users 
-       WHERE role = 'paciente' 
+      `SELECT id, name, email, created_at, is_active
+       FROM users
+       WHERE role = 'paciente'
        ORDER BY name ASC`,
       {}
     );
@@ -47,6 +47,7 @@ const getPatients = async (req, res) => {
 
       patientsWithStats.push({
         ...p,
+        is_active: p.is_active === undefined ? 1 : p.is_active,
         avg_score: avgScore,
         last_activity: lastActivity.length > 0 ? lastActivity[0].created_at : p.created_at,
         status
@@ -74,8 +75,8 @@ const getPatientHistory = async (req, res) => {
     const { id } = req.params;
 
     const patient = await get(
-      `SELECT id, name, email, created_at 
-       FROM users 
+      `SELECT id, name, email, created_at, is_active
+       FROM users
        WHERE id = @id AND role = 'paciente'`,
       { id }
     );
@@ -157,6 +158,7 @@ const getPatientHistory = async (req, res) => {
 
     const overview = {
       ...patient,
+      is_active: patient.is_active === undefined ? 1 : patient.is_active,
       avg_score: avgScore,
       status
     };
@@ -176,7 +178,48 @@ const getPatientHistory = async (req, res) => {
   }
 };
 
+
+/**
+ * Toggle patient active/inactive status
+ */
+const togglePatientStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const patient = await get(
+      `SELECT id, is_active FROM users WHERE id = @id AND role = 'paciente'`,
+      { id }
+    );
+
+    if (!patient) {
+      return res.status(404).json({
+        error: 'Paciente não encontrado',
+        message: 'Nenhum paciente cadastrado foi localizado com o ID fornecido.'
+      });
+    }
+
+    const newStatus = patient.is_active === 1 ? 0 : 1;
+    await run(
+      `UPDATE users SET is_active = @newStatus WHERE id = @id`,
+      { newStatus, id }
+    );
+
+    return res.status(200).json({
+      id: id,
+      is_active: newStatus,
+      message: newStatus === 1 ? 'Paciente reativado com sucesso.' : 'Paciente arquivado com sucesso.'
+    });
+  } catch (error) {
+    console.error('Erro ao alternar status do paciente:', error);
+    return res.status(500).json({
+      error: 'Erro interno',
+      message: 'Não foi possível atualizar o status do paciente.'
+    });
+  }
+};
+
 module.exports = {
   getPatients,
-  getPatientHistory
+  getPatientHistory,
+  togglePatientStatus
 };

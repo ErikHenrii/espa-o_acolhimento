@@ -11,6 +11,7 @@ let authToken = null;
 
 let patientsList = [];
 let selectedPatientId = null;
+let patientFilter = 'active'; // 'active' | 'inactive' | 'all'
 let selectedPatientData = {
   overview: null,
   checkins: [],
@@ -144,7 +145,8 @@ function loadMockPatients() {
       created_at: '2026-01-15T10:00:00.000Z',
       avg_score: 8.2,
       last_activity: new Date(now - 1000*60*60*2).toISOString(),
-      status: 'estavel'
+      status: 'estavel',
+      is_active: 1
     },
     {
       id: 'p_102',
@@ -153,7 +155,8 @@ function loadMockPatients() {
       created_at: '2026-02-01T14:30:00.000Z',
       avg_score: 5.6,
       last_activity: new Date(now - 1000*60*60*14).toISOString(),
-      status: 'atencao'
+      status: 'atencao',
+      is_active: 1
     },
     {
       id: 'p_103',
@@ -162,7 +165,8 @@ function loadMockPatients() {
       created_at: '2026-03-10T09:15:00.000Z',
       avg_score: 4.1,
       last_activity: new Date(now - 1000*60*60*36).toISOString(),
-      status: 'critico'
+      status: 'critico',
+      is_active: 0
     },
     {
       id: 'p_104',
@@ -171,18 +175,28 @@ function loadMockPatients() {
       created_at: '2026-04-05T11:20:00.000Z',
       avg_score: 7.8,
       last_activity: new Date(now - 1000*60*60*5).toISOString(),
-      status: 'estavel'
+      status: 'estavel',
+      is_active: 1
     }
   ];
 }
 
-// Render Patients List in Sidebar
+// Render Patients List in Sidebar (divided by active/inactive filter)
 function renderPatientList(filterText = '') {
   const container = document.getElementById('patient-list');
   const badge = document.getElementById('patient-count-badge');
   if (!container) return;
 
-  const filtered = patientsList.filter(p => p.name.toLowerCase().includes(filterText.toLowerCase()));
+  // Filter by search text
+  let filtered = patientsList.filter(p => p.name.toLowerCase().includes(filterText.toLowerCase()));
+  
+  // Filter by active/inactive status
+  if (patientFilter === 'active') {
+    filtered = filtered.filter(p => p.is_active !== 0);
+  } else if (patientFilter === 'inactive') {
+    filtered = filtered.filter(p => p.is_active === 0);
+  }
+
   if (badge) badge.textContent = filtered.length;
 
   if (filtered.length === 0) {
@@ -190,36 +204,73 @@ function renderPatientList(filterText = '') {
     return;
   }
 
-  container.innerHTML = filtered.map(p => {
-    const isSelected = p.id === selectedPatientId;
-    
-    let dotColorClass = 'bg-emerald-500';
-    if (p.avg_score < 5) dotColorClass = 'bg-rose-500';
-    else if (p.avg_score < 7) dotColorClass = 'bg-amber-500';
+  // Split into active and inactive
+  const activePatients = filtered.filter(p => p.is_active !== 0);
+  const inactivePatients = filtered.filter(p => p.is_active === 0);
+  let html = '';
 
-    return `
-      <div onclick="selectPatient('${escapeHtml(p.id)}')" 
-        class="p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-          isSelected 
-            ? 'bg-teal-700 text-white border-teal-800 shadow-sm' 
-            : 'bg-white hover:bg-teal-50/80 border-teal-100 text-slate-800'
-        }">
-        <div class="flex items-center gap-3">
-          <div class="relative">
-            <div class="w-9 h-9 rounded-xl ${isSelected ? 'bg-teal-600 text-amber-300' : 'bg-teal-100 text-teal-800'} font-bold text-sm flex items-center justify-center">
-              ${escapeHtml(p.name.charAt(0))}
-            </div>
-            <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${dotColorClass}"></span>
+  if (patientFilter === 'all' || patientFilter === 'active') {
+    if (patientFilter === 'all' && activePatients.length > 0) {
+      html += `<div class="flex items-center gap-2 px-1 pb-1 pt-1">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span class="text-[10px] font-bold text-teal-800 uppercase tracking-wider">Ativos (${activePatients.length})</span>
+      </div>`;
+    }
+    activePatients.forEach(p => { html += renderPatientCard(p); });
+  }
+
+  if (patientFilter === 'all' || patientFilter === 'inactive') {
+    if (patientFilter === 'all' && inactivePatients.length > 0) {
+      html += `<div class="flex items-center gap-2 px-1 pb-1 pt-3">
+        <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Inativos (${inactivePatients.length})</span>
+      </div>`;
+    }
+    if (patientFilter === 'inactive' && inactivePatients.length === 0) {
+      html += `<div class="p-4 text-center text-xs text-slate-400">Nenhum paciente inativo.</div>`;
+    }
+    inactivePatients.forEach(p => { html += renderPatientCard(p); });
+  }
+
+  container.innerHTML = html;
+}
+
+// Render a single patient card
+function renderPatientCard(p) {
+  const isSelected = p.id === selectedPatientId;
+  const isActive = p.is_active !== 0;
+  
+  let dotColorClass = 'bg-emerald-500';
+  if (p.avg_score < 5) dotColorClass = 'bg-rose-500';
+  else if (p.avg_score < 7) dotColorClass = 'bg-amber-500';
+
+  const opacityClass = isActive ? '' : 'opacity-55';
+  const statusBadge = isActive 
+    ? '' 
+    : `<span class="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Inativo</span>`;
+
+  return `
+    <div onclick="selectPatient('${escapeHtml(p.id)}')" 
+      class="p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${opacityClass} ${
+        isSelected 
+          ? 'bg-teal-700 text-white border-teal-800 shadow-sm' 
+          : 'bg-white hover:bg-teal-50/80 border-teal-100 text-slate-800'
+      }">
+      <div class="flex items-center gap-3">
+        <div class="relative">
+          <div class="w-9 h-9 rounded-xl ${isSelected ? 'bg-teal-600 text-amber-300' : 'bg-teal-100 text-teal-800'} font-bold text-sm flex items-center justify-center">
+            ${escapeHtml(p.name.charAt(0))}
           </div>
-          <div class="text-left">
-            <span class="block text-xs font-bold ${isSelected ? 'text-white' : 'text-teal-950'} line-clamp-1">${escapeHtml(p.name)}</span>
-            <span class="text-[10px] ${isSelected ? 'text-teal-200' : 'text-slate-400'}">Média: ${escapeHtml(p.avg_score.toFixed(1))}/10</span>
-          </div>
+          <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${dotColorClass}"></span>
         </div>
-        <i class="fa-solid fa-chevron-right text-[10px] ${isSelected ? 'text-amber-300' : 'text-slate-300'}"></i>
+        <div class="text-left">
+          <span class="block text-xs font-bold ${isSelected ? 'text-white' : 'text-teal-950'} line-clamp-1">${escapeHtml(p.name)}</span>
+          ${statusBadge || `<span class="text-[10px] ${isSelected ? 'text-teal-200' : 'text-slate-400'}">Média: ${escapeHtml(p.avg_score.toFixed(1))}/10</span>`}
+        </div>
       </div>
-    `;
-  }).join('');
+      <i class="fa-solid fa-chevron-right text-[10px] ${isSelected ? 'text-amber-300' : 'text-slate-300'}"></i>
+    </div>
+  `;
 }
 
 // Render Mobile Select Dropdown Options
@@ -227,8 +278,12 @@ function renderMobilePatientSelect() {
   const select = document.getElementById('patient-select-mobile');
   if (!select) return;
 
-  select.innerHTML = patientsList.map(p => `
-    <option value="${escapeHtml(p.id)}" ${p.id === selectedPatientId ? 'selected' : ''}>${escapeHtml(p.name)} (Média ${p.avg_score.toFixed(1)})</option>
+  let filtered = patientsList;
+  if (patientFilter === 'active') filtered = filtered.filter(p => p.is_active !== 0);
+  else if (patientFilter === 'inactive') filtered = filtered.filter(p => p.is_active === 0);
+
+  select.innerHTML = filtered.map(p => `
+    <option value="${escapeHtml(p.id)}" ${p.id === selectedPatientId ? 'selected' : ''}>${escapeHtml(p.name)} ${p.is_active === 0 ? '(Inativo)' : ''} — Média ${p.avg_score.toFixed(1)}</option>
   `).join('');
 }
 
@@ -280,6 +335,7 @@ window.selectPatient = selectPatient;
 // Mock patient history generator
 function loadMockPatientHistory(patientId) {
   const patient = patientsList.find(p => p.id === patientId) || patientsList[0];
+  const patientIsActive = patient ? patient.is_active : 1;
   const now = new Date();
 
   const mockCheckins = [];
@@ -331,7 +387,7 @@ function loadMockPatientHistory(patientId) {
   );
 
   selectedPatientData = {
-    overview: patient,
+    overview: { ...patient, is_active: patientIsActive },
     checkins: mockCheckins,
     sleep: mockSleep,
     journals: mockJournals
@@ -546,9 +602,72 @@ function renderSleepRecords() {
   `).join('');
 }
 
+// Toggle patient active/inactive status
+async function togglePatientStatus() {
+  if (!selectedPatientId) return;
+
+  const patient = patientsList.find(p => p.id === selectedPatientId);
+  if (!patient) return;
+
+  const isActive = patient.is_active !== 0;
+  const actionLabel = isActive ? 'arquivar' : 'reativar';
+
+  if (!confirm('Deseja ' + actionLabel + ' o paciente ' + patient.name + '?')) return;
+
+  try {
+    const res = await fetch(API_BASE + '/therapist/patient/' + selectedPatientId + '/toggle-status', {
+      method: 'PATCH',
+      headers: {
+        'Authorization': 'Bearer ' + authToken,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      patient.is_active = data.is_active;
+    } else if (res.status === 401) {
+      showToast('Sessão expirada. Faça login novamente.', 'error');
+      setTimeout(() => { if (window.logoutApp) window.logoutApp(); }, 1500);
+      return;
+    } else {
+      throw new Error('API request failed');
+    }
+  } catch (e) {
+    console.warn('API toggle status failed, updating locally');
+    patient.is_active = isActive ? 0 : 1;
+  }
+
+  showToast(patient.is_active !== 0 ? 'Paciente reativado!' : 'Paciente arquivado!', 'success');
+  renderPatientList(document.getElementById('patient-search-input') ? document.getElementById('patient-search-input').value : '');
+  renderMobilePatientSelect();
+  renderPatientOverview();
+}
+window.togglePatientStatus = togglePatientStatus;
+
+// Initialize filter toggle buttons
+function initFilterToggle() {
+  const buttons = document.querySelectorAll('.patient-filter-btn');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      buttons.forEach(b => {
+        b.classList.remove('bg-white', 'text-teal-800', 'shadow-sm');
+        b.classList.add('text-slate-500');
+      });
+      btn.classList.add('bg-white', 'text-teal-800', 'shadow-sm');
+      btn.classList.remove('text-slate-500');
+
+      patientFilter = btn.getAttribute('data-filter');
+      renderPatientList(document.getElementById('patient-search-input') ? document.getElementById('patient-search-input').value : '');
+      renderMobilePatientSelect();
+    });
+  });
+}
+
 // Initial Listener Setup
 document.addEventListener('DOMContentLoaded', () => {
   if (checkAuth()) {
+    initFilterToggle();
     fetchPatients();
 
     const searchInput = document.getElementById('patient-search-input');

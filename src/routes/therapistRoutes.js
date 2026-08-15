@@ -13,4 +13,7 @@ router.get('/patients', therapistController.getPatients);
 // GET /api/therapist/patient/:id/history
 router.get('/patient/:id/history', therapistController.getPatientHistory);
 
+// PATCH /api/therapist/patient/:id/toggle-status
+router.patch('/patient/:id/toggle-status', therapistController.togglePatientStatus);
+
 module.exports = router;

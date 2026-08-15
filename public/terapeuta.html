@@ -104,8 +104,21 @@
             <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-xs text-slate-400"></i>
           </div>
 
+          <!-- Active/Inactive Filter Toggle -->
+          <div class="flex bg-teal-50 p-1 rounded-xl mb-3 gap-1">
+            <button type="button" data-filter="active" class="patient-filter-btn flex-1 py-2 rounded-lg text-xs font-bold text-center transition-all bg-white text-teal-800 shadow-sm">
+              <i class="fa-solid fa-circle-check text-[10px] mr-1"></i>Ativos
+            </button>
+            <button type="button" data-filter="inactive" class="patient-filter-btn flex-1 py-2 rounded-lg text-xs font-bold text-center transition-all text-slate-500 hover:text-teal-700">
+              <i class="fa-solid fa-circle-minus text-[10px] mr-1"></i>Inativos
+            </button>
+            <button type="button" data-filter="all" class="patient-filter-btn flex-1 py-2 rounded-lg text-xs font-bold text-center transition-all text-slate-500 hover:text-teal-700">
+              <i class="fa-solid fa-users text-[10px] mr-1"></i>Todos
+            </button>
+          </div>
+
           <!-- Patient Cards Container -->
-          <div id="patient-list" class="space-y-2 max-h-[calc(100vh-250px)] overflow-y-auto pr-1">
+          <div id="patient-list" class="space-y-2 max-h-[calc(100vh-310px)] overflow-y-auto pr-1">
             <!-- Rendered dynamically by terapeuta.js -->
             <div class="p-4 text-center text-xs text-slate-400">Carregando pacientes...</div>
           </div>
@@ -141,6 +154,13 @@
                     <span id="overview-status-pill" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
                       <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Estável
                     </span>
+                    <span id="overview-active-pill" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-800">
+                      <span class="w-2 h-2 rounded-full bg-teal-500"></span> Ativo
+                    </span>
+                    <button id="btn-toggle-patient-status" onclick="togglePatientStatus()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all border cursor-pointer">
+                      <i class="fa-solid fa-power-off text-[10px]"></i>
+                      <span id="toggle-status-label">Arquivar</span>
+                    </button>
                   </div>
                   <p id="overview-email" class="text-xs text-slate-500">paciente@email.com</p>
                   <p id="overview-since" class="text-[11px] text-teal-700 mt-1 font-medium">Cadastrado em --/--/----</p>
