@@ -49,7 +49,7 @@ const getPatients = async (req, res) => {
       // Check most recent activity across checkins, sleep, and journal
       const [lastCheckin, lastSleep, lastJournal] = await Promise.all([
         all(`SELECT created_at FROM checkins WHERE patient_id = @patientId ORDER BY created_at DESC LIMIT 1`, { patientId: p.id }),
-        all(`SELECT created_at FROM sleep_logs WHERE patient_id = @patientId ORDER BY created_at DESC LIMIT 1`, { patientId: p.id }),
+        all(`SELECT created_at FROM sleep_records WHERE patient_id = @patientId ORDER BY created_at DESC LIMIT 1`, { patientId: p.id }),
         all(`SELECT created_at FROM journal_entries WHERE patient_id = @patientId ORDER BY created_at DESC LIMIT 1`, { patientId: p.id })
       ]);
 
