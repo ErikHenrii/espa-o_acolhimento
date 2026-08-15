@@ -125,9 +125,17 @@ function navigateTo(viewName) {
 }
 window.navigateTo = navigateTo;
 
+// Normalize date string to ISO format (handles both old and new formats)
+function normalizeDate(dateStr) {
+  if (!dateStr) return dateStr;
+  if (typeof dateStr !== 'string') return dateStr;
+  if (dateStr.includes('T')) return dateStr;
+  return dateStr.replace(' ', 'T') + 'Z';
+}
+
 // Formatters for Portuguese Dates
 function formatPortugueseDate(dateStr) {
-  const date = new Date(dateStr);
+  const date = new Date(normalizeDate(dateStr));
   if (isNaN(date)) return dateStr;
   
   const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -137,7 +145,7 @@ function formatPortugueseDate(dateStr) {
 }
 
 function formatFullDate(dateStr) {
-  const date = new Date(dateStr);
+  const date = new Date(normalizeDate(dateStr));
   if (isNaN(date)) return dateStr;
 
   const fullDays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];

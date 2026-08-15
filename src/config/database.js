@@ -59,7 +59,7 @@ async function initDatabase() {
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL CHECK (role IN ('paciente', 'terapeuta')),
       must_change_credentials INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS')
+      created_at TEXT DEFAULT TO_CHAR(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
     );
 
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -74,7 +74,7 @@ async function initDatabase() {
       wellness_score INTEGER CHECK (wellness_score BETWEEN 1 AND 10),
       triggers TEXT DEFAULT '[]',
       notes TEXT DEFAULT '',
-      created_at TEXT DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS')
+      created_at TEXT DEFAULT TO_CHAR(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
     );
 
     CREATE INDEX IF NOT EXISTS idx_checkins_patient_id ON checkins(patient_id);
@@ -87,7 +87,7 @@ async function initDatabase() {
       sleep_hours REAL NOT NULL CHECK (sleep_hours >= 0 AND sleep_hours <= 24),
       sleep_quality TEXT,
       sleep_notes TEXT DEFAULT '',
-      created_at TEXT DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS')
+      created_at TEXT DEFAULT TO_CHAR(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
     );
 
     CREATE INDEX IF NOT EXISTS idx_sleep_records_patient_id ON sleep_records(patient_id);
@@ -100,7 +100,7 @@ async function initDatabase() {
       content TEXT NOT NULL,
       privacy TEXT NOT NULL CHECK (privacy IN ('shared', 'private')),
       audio_url TEXT,
-      created_at TEXT DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS')
+      created_at TEXT DEFAULT TO_CHAR(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
     );
 
     CREATE INDEX IF NOT EXISTS idx_journal_entries_patient_id ON journal_entries(patient_id);

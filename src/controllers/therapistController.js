@@ -10,6 +10,17 @@ function sanitizeString(str) {
 }
 
 /**
+ * Normalize created_at to ISO 8601 with UTC 'Z' suffix.
+ * Handles old format 'YYYY-MM-DD HH:MI:SS' (assumed UTC) and new ISO format.
+ */
+function normalizeDate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return dateStr;
+  if (dateStr.includes('T')) return dateStr;
+  // Old format: 'YYYY-MM-DD HH:MI:SS' → treat as UTC
+  return dateStr.replace(' ', 'T') + 'Z';
+}
+
+/**
  * List all registered patients
  * Returns: { patients: [...] } with frontend-friendly field names
  */
@@ -49,7 +60,7 @@ const getPatients = async (req, res) => {
         ...p,
         is_active: p.is_active === undefined ? 1 : p.is_active,
         avg_score: avgScore,
-        last_activity: lastActivity.length > 0 ? lastActivity[0].created_at : p.created_at,
+        last_activity: lastActivity.length > 0 ? normalizeDate(lastActivity[0].created_at) : normalizeDate(p.created_at),
         status
       });
     }
@@ -131,7 +142,7 @@ const getPatientHistory = async (req, res) => {
         score: c.wellness_score,
         triggers: triggers,
         notes: c.notes || '',
-        created_at: c.created_at
+        created_at: normalizeDate(c.created_at)
       };
     });
 
@@ -142,7 +153,7 @@ const getPatientHistory = async (req, res) => {
       hours: s.sleep_hours,
       quality: s.sleep_quality,
       notes: s.sleep_notes || '',
-      created_at: s.created_at
+      created_at: normalizeDate(s.created_at)
     }));
 
     const journalsMapped = journalEntries.map(j => ({
@@ -153,11 +164,12 @@ const getPatientHistory = async (req, res) => {
       is_shared: j.privacy === 'shared',
       privacy: j.privacy,
       audio_url: j.audio_url,
-      created_at: j.created_at
+      created_at: normalizeDate(j.created_at)
     }));
 
     const overview = {
       ...patient,
+      created_at: normalizeDate(patient.created_at),
       is_active: patient.is_active === undefined ? 1 : patient.is_active,
       avg_score: avgScore,
       status

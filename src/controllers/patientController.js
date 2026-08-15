@@ -19,6 +19,16 @@ function sanitizeTriggers(triggers) {
 }
 
 /**
+ * Normalize created_at to ISO 8601 with UTC 'Z' suffix.
+ * Handles old format 'YYYY-MM-DD HH:MI:SS' (assumed UTC) and new ISO format.
+ */
+function normalizeDate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return dateStr;
+  if (dateStr.includes('T')) return dateStr;
+  return dateStr.replace(' ', 'T') + 'Z';
+}
+
+/**
  * Get all data for the authenticated patient
  * Returns: { checkins, sleep, journals } with frontend-friendly field aliases
  */
@@ -59,7 +69,7 @@ const getData = async (req, res) => {
         score: c.wellness_score,
         triggers: triggers,
         notes: c.notes || '',
-        created_at: c.created_at
+        created_at: normalizeDate(c.created_at)
       };
     });
 
@@ -70,7 +80,7 @@ const getData = async (req, res) => {
       hours: s.sleep_hours,
       quality: s.sleep_quality,
       notes: s.sleep_notes || '',
-      created_at: s.created_at
+      created_at: normalizeDate(s.created_at)
     }));
 
     const journalsMapped = journalEntries.map(j => ({
@@ -81,7 +91,7 @@ const getData = async (req, res) => {
       is_shared: j.privacy === 'shared',
       privacy: j.privacy,
       audio_url: j.audio_url,
-      created_at: j.created_at
+      created_at: normalizeDate(j.created_at)
     }));
 
     return res.status(200).json({

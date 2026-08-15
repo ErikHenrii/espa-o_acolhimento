@@ -82,9 +82,18 @@ function checkAuth() {
   return true;
 }
 
+// Normalize date string to ISO format (handles both old and new formats)
+function normalizeDate(dateStr) {
+  if (!dateStr) return dateStr;
+  if (typeof dateStr !== 'string') return dateStr;
+  if (dateStr.includes('T')) return dateStr;
+  // Old format: 'YYYY-MM-DD HH:MI:SS' → treat as UTC
+  return dateStr.replace(' ', 'T') + 'Z';
+}
+
 // Portuguese Date Formatting
 function formatPortugueseDate(dateStr) {
-  const date = new Date(dateStr);
+  const date = new Date(normalizeDate(dateStr));
   if (isNaN(date)) return dateStr;
   
   const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -92,7 +101,7 @@ function formatPortugueseDate(dateStr) {
 }
 
 function formatDateShort(dateStr) {
-  const date = new Date(dateStr);
+  const date = new Date(normalizeDate(dateStr));
   if (isNaN(date)) return dateStr;
   return `${date.getDate()}/${date.getMonth() + 1}`;
 }
@@ -417,6 +426,33 @@ function renderPatientOverview() {
   document.getElementById('overview-email').textContent = p.email;
   document.getElementById('overview-since').textContent = `Cadastrado(a) em ${formatDateShort(p.created_at)}`;
 
+  // Active/inactive pill
+  const activePill = document.getElementById('overview-active-pill');
+  if (activePill) {
+    const isActive = p.is_active !== 0;
+    if (isActive) {
+      activePill.className = 'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-800';
+      activePill.innerHTML = '<span class="w-2 h-2 rounded-full bg-teal-500"></span> Ativo';
+    } else {
+      activePill.className = 'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-200 text-slate-600';
+      activePill.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-400"></span> Inativo';
+    }
+  }
+
+  // Toggle button
+  const toggleBtn = document.getElementById('btn-toggle-patient-status');
+  const toggleLabel = document.getElementById('toggle-status-label');
+  if (toggleBtn) {
+    const isActive = p.is_active !== 0;
+    if (isActive) {
+      toggleBtn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-pointer';
+      if (toggleLabel) toggleLabel.textContent = 'Arquivar';
+    } else {
+      toggleBtn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all border border-teal-300 text-teal-700 bg-teal-50 hover:bg-teal-100 cursor-pointer';
+      if (toggleLabel) toggleLabel.textContent = 'Reativar';
+    }
+  }
+
   const pill = document.getElementById('overview-status-pill');
   if (pill) {
     if (p.avg_score >= 7) {
@@ -636,6 +672,11 @@ async function togglePatientStatus() {
   } catch (e) {
     console.warn('API toggle status failed, updating locally');
     patient.is_active = isActive ? 0 : 1;
+  }
+
+  // Also update the overview data so renderPatientOverview reflects the change
+  if (selectedPatientData.overview) {
+    selectedPatientData.overview.is_active = patient.is_active;
   }
 
   showToast(patient.is_active !== 0 ? 'Paciente reativado!' : 'Paciente arquivado!', 'success');
