@@ -477,13 +477,13 @@ function renderRecentCheckins() {
     return;
   }
 
-  const emojiMap = { 'Radiante': '😄', 'Bem': '🙂', 'Neutro': '😐', 'Cansado': '😔', 'Difícil': '😢' };
+  // Use original SVG mood characters instead of emojis
 
   container.innerHTML = selectedPatientData.checkins.slice(0, 5).map(c => `
     <div class="p-3 rounded-xl bg-white border border-teal-100 shadow-sm space-y-1.5">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <span class="text-lg">${emojiMap[c.mood] || '🙂'}</span>
+          <span class="inline-block">${MoodCharacters.getSVG(c.mood, 24)}</span>
           <span class="text-xs font-bold text-teal-950">${escapeHtml(c.mood)}</span>
         </div>
         <span class="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">Nota ${escapeHtml(String(c.score))}/10</span>

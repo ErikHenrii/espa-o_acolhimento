@@ -650,15 +650,14 @@ function renderHistoryTimeline() {
   container.innerHTML = combined.map(item => {
     if (item.type === 'checkin') {
       const c = item.data;
-      const emojiMap = { 'Radiante': '😄', 'Bem': '🙂', 'Neutro': '😐', 'Cansado': '😔', 'Difícil': '😢' };
-      const emoji = emojiMap[c.mood] || '🙂';
+      const moodSvg = MoodCharacters.getSVG(c.mood, 28);
       const triggersHtml = (c.triggers || []).map(t => `<span class="px-2 py-0.5 rounded-md bg-linen text-[10px] font-semibold text-charcoal">${escapeHtml(t)}</span>`).join(' ');
 
       return `
         <div class="p-4 rounded-2xl bg-white border border-linen shadow-sm relative overflow-hidden">
           <div class="flex items-center justify-between mb-2">
             <div class="flex items-center gap-2">
-              <span class="text-xl">${emoji}</span>
+              <span class="inline-block">${moodSvg}</span>
               <div>
                 <span class="text-xs font-bold text-charcoal block">Check-in: ${escapeHtml(c.mood)}</span>
                 <span class="text-[10px] text-slate-400">${escapeHtml(formatPortugueseDate(c.created_at))}</span>

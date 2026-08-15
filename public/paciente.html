@@ -207,32 +207,9 @@
           <p class="text-xs text-slate-500">Selecione o estado que melhor descreve seu momento</p>
         </div>
 
-        <!-- 5 Mood Cards Selector -->
-        <div class="grid grid-cols-5 gap-2">
-          <button type="button" data-mood="Radiante" data-score="10" class="mood-btn p-2 rounded-2xl bg-white border border-linen shadow-sm text-center transition-all hover:scale-105 active:scale-95">
-            <span class="text-2xl block mb-1">😄</span>
-            <span class="text-[10px] font-bold text-charcoal block">Radiante</span>
-          </button>
-          
-          <button type="button" data-mood="Bem" data-score="8" class="mood-btn p-2 rounded-2xl bg-white border border-linen shadow-sm text-center transition-all hover:scale-105 active:scale-95 ring-2 ring-sage bg-sage/10">
-            <span class="text-2xl block mb-1">🙂</span>
-            <span class="text-[10px] font-bold text-charcoal block">Bem</span>
-          </button>
-
-          <button type="button" data-mood="Neutro" data-score="6" class="mood-btn p-2 rounded-2xl bg-white border border-linen shadow-sm text-center transition-all hover:scale-105 active:scale-95">
-            <span class="text-2xl block mb-1">😐</span>
-            <span class="text-[10px] font-bold text-charcoal block">Neutro</span>
-          </button>
-
-          <button type="button" data-mood="Cansado" data-score="4" class="mood-btn p-2 rounded-2xl bg-white border border-linen shadow-sm text-center transition-all hover:scale-105 active:scale-95">
-            <span class="text-2xl block mb-1">😔</span>
-            <span class="text-[10px] font-bold text-charcoal block">Cansado</span>
-          </button>
-
-          <button type="button" data-mood="Difícil" data-score="2" class="mood-btn p-2 rounded-2xl bg-white border border-linen shadow-sm text-center transition-all hover:scale-105 active:scale-95">
-            <span class="text-2xl block mb-1">😢</span>
-            <span class="text-[10px] font-bold text-charcoal block">Difícil</span>
-          </button>
+        <!-- Mood Character Selector (9 emotions with original SVG characters) -->
+        <div id="mood-selector-grid" class="grid grid-cols-3 gap-2">
+          <!-- Generated dynamically by mood-characters.js + paciente.js -->
         </div>
 
         <!-- Wellness Slider (1 to 10) -->
@@ -303,23 +280,23 @@
           <label class="text-xs font-bold text-charcoal uppercase tracking-wider block">Qualidade do Sono</label>
           <div class="grid grid-cols-5 gap-2">
             <button type="button" data-quality="Excelente" class="sleep-qual-btn p-2 rounded-2xl bg-white border border-linen text-center transition-all ring-2 ring-lavender bg-lavender/10">
-              <span class="text-xl block mb-1">🌟</span>
+              <img src="https://media.base44.com/images/public/6a7eec519b41f7d4409345e9/6ffeca792_generated_image.png" width="28" height="28" alt="Excelente" loading="lazy" />
               <span class="text-[10px] font-bold text-charcoal block">Excelente</span>
             </button>
             <button type="button" data-quality="Boa" class="sleep-qual-btn p-2 rounded-2xl bg-white border border-linen text-center transition-all">
-              <span class="text-xl block mb-1">😊</span>
+              <img src="https://media.base44.com/images/public/6a7eec519b41f7d4409345e9/f01afa1c3_generated_image.png" width="28" height="28" alt="Boa" loading="lazy" />
               <span class="text-[10px] font-bold text-charcoal block">Boa</span>
             </button>
             <button type="button" data-quality="Regular" class="sleep-qual-btn p-2 rounded-2xl bg-white border border-linen text-center transition-all">
-              <span class="text-xl block mb-1">😐</span>
+              <img src="https://media.base44.com/images/public/6a7eec519b41f7d4409345e9/753f2465b_generated_image.png" width="28" height="28" alt="Regular" loading="lazy" />
               <span class="text-[10px] font-bold text-charcoal block">Regular</span>
             </button>
             <button type="button" data-quality="Ruim" class="sleep-qual-btn p-2 rounded-2xl bg-white border border-linen text-center transition-all">
-              <span class="text-xl block mb-1">😴</span>
+              <img src="https://media.base44.com/images/public/6a7eec519b41f7d4409345e9/753f2465b_generated_image.png" width="28" height="28" alt="Ruim" loading="lazy" />
               <span class="text-[10px] font-bold text-charcoal block">Ruim</span>
             </button>
             <button type="button" data-quality="Péssima" class="sleep-qual-btn p-2 rounded-2xl bg-white border border-linen text-center transition-all">
-              <span class="text-xl block mb-1">😫</span>
+              <img src="https://media.base44.com/images/public/6a7eec519b41f7d4409345e9/b69dbe7b5_generated_image.png" width="28" height="28" alt="Péssima" loading="lazy" />
               <span class="text-[10px] font-bold text-charcoal block">Péssima</span>
             </button>
           </div>
@@ -439,6 +416,7 @@
   </div>
 
   <!-- Patient Portal JS Script -->
+  <script src="js/mood-characters.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/paciente.js"></script>
 
