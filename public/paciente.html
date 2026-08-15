@@ -70,7 +70,10 @@
           <span>Espaço de Acolhimento</span>
         </div>
         <h1 id="user-greeting" class="text-xl font-bold text-charcoal">Olá, Paciente</h1>
-        <p class="text-[11px] text-slate-500 font-medium">Terapeuta: Jaqueline Camila</p>
+        <p class="text-[11px] text-slate-500 font-medium">Terapeuta: <span id="therapist-name-display">Carregando...</span></p>
+        <button id="btn-whatsapp-therapist" onclick="contactTherapistWhatsApp()" class="hidden mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-green-500 hover:bg-green-600 text-white shadow-sm transition-all">
+          <i class="fa-brands fa-whatsapp text-sm"></i> Conversar no WhatsApp
+        </button>
       </div>
       <div class="flex items-center gap-2">
         <button onclick="openCredentialModal(false)" title="Alterar Credenciais" class="w-9 h-9 rounded-full bg-linen/80 text-charcoal flex items-center justify-center hover:bg-sage-light hover:text-sage-900 transition-all">

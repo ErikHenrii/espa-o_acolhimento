@@ -163,7 +163,11 @@
                     </button>
                   </div>
                   <p id="overview-email" class="text-xs text-slate-500">paciente@email.com</p>
-                  <p id="overview-whatsapp" class="text-[11px] text-teal-700 mt-0.5 font-medium hidden"><i class="fa-brands fa-whatsapp text-xs mr-1"></i><span>--</span></p>
+                  <div id="overview-whatsapp-container" class="mt-1 hidden">
+                    <button id="btn-whatsapp-patient" onclick="contactPatientWhatsApp()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-green-500 hover:bg-green-600 text-white shadow-sm transition-all">
+                      <i class="fa-brands fa-whatsapp text-sm"></i> Conversar no WhatsApp
+                    </button>
+                  </div>
                   <p id="overview-since" class="text-[11px] text-teal-700 mt-1 font-medium">Cadastrado em --/--/----</p>
                 </div>
               </div>

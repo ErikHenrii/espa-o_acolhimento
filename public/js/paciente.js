@@ -96,6 +96,50 @@ function checkAuth() {
   return true;
 }
 
+// ============================================================
+// Therapist contact info (WhatsApp)
+// ============================================================
+let therapistInfo = { name: '', specialty: '', whatsapp: '' };
+
+async function fetchTherapistInfo() {
+  try {
+    const res = await fetch(API_BASE + '/patient/therapist-info', {
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
+    if (res.ok) {
+      therapistInfo = await res.json();
+      // Update display
+      var nameEl = document.getElementById('therapist-name-display');
+      if (nameEl) nameEl.textContent = therapistInfo.name || 'Terapeuta';
+      var waBtn = document.getElementById('btn-whatsapp-therapist');
+      if (waBtn) {
+        if (therapistInfo.whatsapp) {
+          waBtn.classList.remove('hidden');
+        } else {
+          waBtn.classList.add('hidden');
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Could not fetch therapist info:', e);
+  }
+}
+
+// Contact therapist via WhatsApp
+function contactTherapistWhatsApp() {
+  if (!therapistInfo.whatsapp) {
+    showToast('Terapeuta não possui WhatsApp cadastrado.', 'error');
+    return;
+  }
+  var clean = therapistInfo.whatsapp.replace(/\D/g, '');
+  if (clean.length === 10 || clean.length === 11) {
+    clean = '55' + clean;
+  }
+  var msg = encodeURIComponent('Olá! Sou paciente do Espaço de Acolhimento e gostaria de conversar.');
+  window.open('https://wa.me/' + clean + '?text=' + msg, '_blank');
+}
+window.contactTherapistWhatsApp = contactTherapistWhatsApp;
+
 // Navigation System (View Switcher)
 function navigateTo(viewName) {
   const views = document.querySelectorAll('.view');

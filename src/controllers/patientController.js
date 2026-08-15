@@ -294,9 +294,41 @@ const createJournal = async (req, res) => {
   }
 };
 
+
+/**
+ * Get the assigned therapist's contact info (name, specialty, whatsapp)
+ */
+const getTherapistInfo = async (req, res) => {
+  try {
+    const therapist = await get(
+      `SELECT name, specialty, whatsapp FROM users WHERE role = 'terapeuta' LIMIT 1`
+    );
+
+    if (!therapist) {
+      return res.status(404).json({
+        error: 'Terapeuta não encontrado',
+        message: 'Nenhum terapeuta cadastrado no sistema.'
+      });
+    }
+
+    return res.status(200).json({
+      name: therapist.name,
+      specialty: therapist.specialty || 'Psicologia',
+      whatsapp: therapist.whatsapp || ''
+    });
+  } catch (error) {
+    console.error('Erro ao buscar terapeuta:', error);
+    return res.status(500).json({
+      error: 'Erro interno',
+      message: 'Não foi possível carregar as informações da terapeuta.'
+    });
+  }
+};
+
 module.exports = {
   getData,
   createCheckin,
   createSleep,
-  createJournal
+  createJournal,
+  getTherapistInfo
 };

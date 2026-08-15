@@ -7,6 +7,9 @@ const { authenticateToken, requireRole } = require('../middleware/authMiddleware
 router.use(authenticateToken);
 router.use(requireRole('paciente'));
 
+// GET /api/patient/therapist-info
+router.get('/therapist-info', patientController.getTherapistInfo);
+
 // GET /api/patient/data
 router.get('/data', patientController.getData);
 

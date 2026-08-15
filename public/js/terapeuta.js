@@ -436,14 +436,15 @@ function renderPatientOverview() {
   document.getElementById('overview-name').textContent = p.name;
   document.getElementById('overview-email').textContent = p.email;
 
-  // Display whatsapp
-  var waEl = document.getElementById('overview-whatsapp');
-  if (waEl) {
+  // Display whatsapp button
+  var waContainer = document.getElementById('overview-whatsapp-container');
+  if (waContainer) {
     if (p.whatsapp) {
-      waEl.classList.remove('hidden');
-      waEl.innerHTML = '<i class="fa-brands fa-whatsapp text-xs mr-1"></i>' + escapeHtml(p.whatsapp);
+      waContainer.classList.remove('hidden');
+      window._currentPatientWhatsapp = p.whatsapp;
     } else {
-      waEl.classList.add('hidden');
+      waContainer.classList.add('hidden');
+      window._currentPatientWhatsapp = null;
     }
   }
   document.getElementById('overview-since').textContent = `Cadastrado(a) em ${formatDateShort(p.created_at)}`;
@@ -865,6 +866,23 @@ function exportPatientPDF() {
   }
 }
 window.exportPatientPDF = exportPatientPDF;
+
+// Contact patient via WhatsApp
+function contactPatientWhatsApp() {
+  var number = window._currentPatientWhatsapp;
+  if (!number) {
+    showToast('Paciente não possui WhatsApp cadastrado.', 'error');
+    return;
+  }
+  // Clean number: remove everything except digits, add country code 55 if needed
+  var clean = number.replace(/\D/g, '');
+  if (clean.length === 10 || clean.length === 11) {
+    clean = '55' + clean; // Brazil country code
+  }
+  var msg = encodeURIComponent('Olá! Sou sua terapeuta do Espaço de Acolhimento. Como posso ajudar?');
+  window.open('https://wa.me/' + clean + '?text=' + msg, '_blank');
+}
+window.contactPatientWhatsApp = contactPatientWhatsApp;
 
 // Toggle patient active/inactive status
 async function togglePatientStatus() {
