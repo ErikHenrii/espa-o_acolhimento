@@ -28,7 +28,7 @@ function validatePassword(password) {
 // ============================================================
 const register = async (req, res) => {
   try {
-    let { name, email, password } = req.body;
+    let { name, email, password, role, specialty } = req.body;
 
     name = sanitizeString(name);
     email = sanitizeString(email).toLowerCase();
@@ -67,18 +67,22 @@ const register = async (req, res) => {
       });
     }
 
+    // Validate role
+    const finalRole = (role === 'terapeuta') ? 'terapeuta' : 'paciente';
+    const finalSpecialty = sanitizeString(specialty || 'Psicologia');
+
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
     const userId = crypto.randomUUID();
 
     await run(
-      `INSERT INTO users (id, name, email, password_hash, role, must_change_credentials)
-       VALUES (@id, @name, @email, @passwordHash, @role, @mustChange)`,
-      { id: userId, name, email, passwordHash, role: 'paciente', mustChange: 0 }
+      `INSERT INTO users (id, name, email, password_hash, role, must_change_credentials, specialty)
+       VALUES (@id, @name, @email, @passwordHash, @role, @mustChange, @specialty)`,
+      { id: userId, name, email, passwordHash, role: finalRole, mustChange: finalRole === 'terapeuta' ? 1 : 0, specialty: finalSpecialty }
     );
 
     const newUser = await get(
-      'SELECT id, name, email, role, must_change_credentials, created_at FROM users WHERE id = @id',
+      'SELECT id, name, email, role, must_change_credentials, specialty, created_at FROM users WHERE id = @id',
       { id: userId }
     );
 
@@ -137,7 +141,7 @@ const login = async (req, res) => {
     }
 
     const user = await get(
-      'SELECT id, name, email, password_hash, role, must_change_credentials, created_at FROM users WHERE email = @email',
+      'SELECT id, name, email, password_hash, role, must_change_credentials, specialty, created_at FROM users WHERE email = @email',
       { email }
     );
 
@@ -286,7 +290,7 @@ const updateCredentials = async (req, res) => {
     }
 
     const updatedUser = await get(
-      'SELECT id, name, email, role, must_change_credentials, created_at FROM users WHERE id = @id',
+      'SELECT id, name, email, role, must_change_credentials, specialty, created_at FROM users WHERE id = @id',
       { id: userId }
     );
 

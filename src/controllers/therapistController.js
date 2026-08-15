@@ -86,7 +86,7 @@ const getPatientHistory = async (req, res) => {
     const { id } = req.params;
 
     const patient = await get(
-      `SELECT id, name, email, created_at, is_active
+      `SELECT id, name, email, created_at, is_active, specialty
        FROM users
        WHERE id = @id AND role = 'paciente'`,
       { id }

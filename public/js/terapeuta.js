@@ -74,6 +74,17 @@ function checkAuth() {
       window.location.href = currentUser.role === 'paciente' ? 'paciente.html' : 'acesso.html';
       return false;
     }
+
+    // Display therapist name and specialty in header
+    var specLabel = document.getElementById('therapist-specialty-label');
+    var therapistNameEl = document.getElementById('therapist-name');
+    if (specLabel) {
+      var specialty = currentUser.specialty || 'Psicologia';
+      specLabel.textContent = escapeHtml(currentUser.name) + ' • ' + escapeHtml(specialty);
+    }
+    if (therapistNameEl) {
+      therapistNameEl.textContent = currentUser.name || 'Terapeuta';
+    }
   } catch (e) {
     window.location.href = 'acesso.html';
     return false;
@@ -351,7 +362,7 @@ function loadMockPatientHistory(patientId) {
   const mockSleep = [];
   const mockJournals = [];
 
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 30; i++) {
     const date = new Date(now - 1000*60*60*24*i);
     const score = Math.min(10, Math.max(2, Math.round(patient.avg_score + (Math.sin(i) * 2))));
     
@@ -472,12 +483,12 @@ function renderPatientOverview() {
   document.getElementById('overview-count-journals').textContent = selectedPatientData.journals.length;
 }
 
-// Render 14 Days Mood Line Chart (SVG)
+// Render 30 Days Mood Line Chart (SVG)
 function renderMoodChart() {
   const container = document.getElementById('therapist-mood-chart');
   if (!container) return;
 
-  const data = [...selectedPatientData.checkins].slice(0, 14).reverse();
+  const data = [...selectedPatientData.checkins].slice(0, 30).reverse();
   if (data.length === 0) {
     container.innerHTML = `<p class="text-xs text-slate-400">Sem dados suficientes de humor.</p>`;
     return;
@@ -516,12 +527,12 @@ function renderMoodChart() {
   `;
 }
 
-// Render 14 Days Sleep Bar Chart (SVG)
+// Render 30 Days Sleep Bar Chart (SVG)
 function renderSleepChart() {
   const container = document.getElementById('therapist-sleep-chart');
   if (!container) return;
 
-  const data = [...selectedPatientData.sleep].slice(0, 14).reverse();
+  const data = [...selectedPatientData.sleep].slice(0, 30).reverse();
   if (data.length === 0) {
     container.innerHTML = `<p class="text-xs text-slate-400">Sem dados suficientes de sono.</p>`;
     return;
@@ -637,6 +648,132 @@ function renderSleepRecords() {
     </div>
   `).join('');
 }
+
+// ============================================================
+// Export Patient Data as PDF
+// ============================================================
+function exportPatientPDF() {
+  const p = selectedPatientData.overview || patientsList.find(x => x.id === selectedPatientId);
+  if (!p) {
+    showToast('Selecione um paciente primeiro.', 'error');
+    return;
+  }
+
+  const checkins = selectedPatientData.checkins || [];
+  const sleep = selectedPatientData.sleep || [];
+  const journals = selectedPatientData.journals || [];
+
+  // Build a printable HTML document
+  const now = new Date();
+  const reportDate = formatPortugueseDate(now.toISOString());
+
+  let html = '<!DOCTYPE html><html lang="pt-BBR"><head><meta charset="UTF-8">';
+  html += '<title>Relatório - ' + escapeHtml(p.name) + '</title>';
+  html += '<style>';
+  html += '@page { margin: 2cm; }';
+  html += 'body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }';
+  html += 'h1 { color: #0f766e; font-size: 20px; border-bottom: 2px solid #14b8a6; padding-bottom: 8px; }';
+  html += 'h2 { color: #0f766e; font-size: 14px; margin-top: 20px; }';
+  html += '.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }';
+  html += '.header-info { font-size: 11px; color: #666; text-align: right; }';
+  html += '.patient-card { background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 8px; padding: 12px; margin: 12px 0; }';
+  html += '.stats { display: flex; gap: 20px; margin: 12px 0; }';
+  html += '.stat { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 16px; text-align: center; }';
+  html += '.stat strong { display: block; font-size: 18px; color: #0f766e; }';
+  html += '.stat span { font-size: 10px; color: #64748b; text-transform: uppercase; }';
+  html += 'table { width: 100%; border-collapse: collapse; margin: 8px 0; }';
+  html += 'th { background: #f0fdfa; color: #0f766e; font-size: 11px; text-align: left; padding: 6px 8px; border-bottom: 2px solid #99f6e4; }';
+  html += 'td { font-size: 11px; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }';
+  html += '.footer { margin-top: 30px; font-size: 10px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 10px; }';
+  html += '.badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; }';
+  html += '.badge-active { background: #d1fae5; color: #065f46; }';
+  html += '.badge-inactive { background: #f1f5f9; color: #64748b; }';
+  html += '</style></head><body>';
+
+  html += '<div class="header">';
+  html += '<div><h1>Espaço de Acolhimento</h1><p style="font-size:11px;color:#666;">Relatório Clínico do Paciente</p></div>';
+  html += '<div class="header-info">Gerado em: ' + escapeHtml(reportDate) + '</div>';
+  html += '</div>';
+
+  html += '<div class="patient-card">';
+  html += '<strong style="font-size:16px;">' + escapeHtml(p.name) + '</strong><br>';
+  html += '<span style="font-size:11px;color:#666;">E-mail: ' + escapeHtml(p.email || '-') + '</span><br>';
+  html += '<span style="font-size:11px;color:#666;">Cadastrado em: ' + escapeHtml(formatDateShort(p.created_at)) + '</span><br>';
+  const isActive = p.is_active !== 0;
+  html += '<span class="badge ' + (isActive ? 'badge-active' : 'badge-inactive') + '">' + (isActive ? 'Ativo' : 'Inativo') + '</span>';
+  html += '</div>';
+
+  html += '<div class="stats">';
+  html += '<div class="stat"><strong>' + checkins.length + '</strong><span>Check-ins</span></div>';
+  html += '<div class="stat"><strong>' + sleep.length + '</strong><span>Registros de Sono</span></div>';
+  html += '<div class="stat"><strong>' + journals.length + '</strong><span>Diários</span></div>';
+  html += '<div class="stat"><strong>' + escapeHtml(String((p.avg_score || 0).toFixed(1))) + '</strong><span>Média Humor</span></div>';
+  html += '</div>';
+
+  // Check-ins table
+  html += '<h2>Últimos Check-ins</h2>';
+  if (checkins.length === 0) {
+    html += '<p style="font-size:11px;color:#999;">Nenhum check-in registrado.</p>';
+  } else {
+    html += '<table><thead><tr><th>Data</th><th>Humor</th><th>Pontuação</th><th>Gatilhos</th><th>Notas</th></tr></thead><tbody>';
+    checkins.slice(0, 30).forEach(c => {
+      html += '<tr>';
+      html += '<td>' + escapeHtml(formatPortugueseDate(c.created_at)) + '</td>';
+      html += '<td>' + escapeHtml(c.mood || '-') + '</td>';
+      html += '<td>' + escapeHtml(String(c.score || '-')) + '/10</td>';
+      html += '<td>' + escapeHtml((c.triggers || []).join(', ') || '-') + '</td>';
+      html += '<td>' + escapeHtml(c.notes || '-') + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  // Sleep records table
+  html += '<h2>Registros de Sono</h2>';
+  if (sleep.length === 0) {
+    html += '<p style="font-size:11px;color:#999;">Nenhum registro de sono.</p>';
+  } else {
+    html += '<table><thead><tr><th>Data</th><th>Horas</th><th>Qualidade</th><th>Notas</th></tr></thead><tbody>';
+    sleep.slice(0, 30).forEach(s => {
+      html += '<tr>';
+      html += '<td>' + escapeHtml(formatPortugueseDate(s.created_at)) + '</td>';
+      html += '<td>' + escapeHtml(String(s.hours || '-')) + 'h</td>';
+      html += '<td>' + escapeHtml(s.quality || '-') + '</td>';
+      html += '<td>' + escapeHtml(s.notes || '-') + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  // Journal entries
+  html += '<h2>Entradas Compartilhadas do Diário</h2>';
+  if (journals.length === 0) {
+    html += '<p style="font-size:11px;color:#999;">Nenhuma entrada compartilhada.</p>';
+  } else {
+    journals.slice(0, 20).forEach(j => {
+      html += '<div style="background:#fefce8;border:1px solid #fef08a;border-radius:6px;padding:8px;margin:6px 0;">';
+      html += '<strong style="font-size:11px;">' + escapeHtml(formatPortugueseDate(j.created_at)) + '</strong><br>';
+      html += '<span style="font-size:11px;">' + escapeHtml((j.content || '').substring(0, 500)) + '</span>';
+      html += '</div>';
+    });
+  }
+
+  html += '<div class="footer">Espaço de Acolhimento — Documento gerado eletronicamente</div>';
+  html += '</body></html>';
+
+  // Open in new window and print
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  } else {
+    showToast('Permita pop-ups para exportar o PDF.', 'error');
+  }
+}
+window.exportPatientPDF = exportPatientPDF;
 
 // Toggle patient active/inactive status
 async function togglePatientStatus() {

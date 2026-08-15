@@ -282,15 +282,20 @@
       roleTerapeutaBtn.className = "flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 text-teal-100 hover:text-white";
       authTabs.classList.remove('hidden');
       document.getElementById('login-email').placeholder = "paciente@email.com";
+      // Hide specialty field for patient registration
+      var specField = document.getElementById('reg-specialty-field');
+      if (specField) specField.classList.add('hidden');
     });
 
     roleTerapeutaBtn.addEventListener('click', function () {
       currentRole = 'terapeuta';
       roleTerapeutaBtn.className = "flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 bg-white text-teal-900 shadow-md";
       rolePacienteBtn.className = "flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 text-teal-100 hover:text-white";
-      authTabs.classList.add('hidden');
-      switchTab('login');
-      document.getElementById('login-email').placeholder = "terapeuta@espacoacolhimento.com";
+      authTabs.classList.remove('hidden');
+      document.getElementById('login-email').placeholder = "terapeuta@email.com";
+      // Show specialty field for therapist registration
+      var specField = document.getElementById('reg-specialty-field');
+      if (specField) specField.classList.remove('hidden');
     });
 
     // Tab Switcher
@@ -425,11 +430,19 @@
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Criando conta...';
 
+      var specialty = '';
+      var specSelect = document.getElementById('reg-specialty');
+      if (specSelect) specialty = specSelect.value;
+
       try {
         var res = await fetch(API_BASE + '/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name, email: email, password: password })
+          body: JSON.stringify({
+            name: name, email: email, password: password,
+            role: currentRole,
+            specialty: currentRole === 'terapeuta' ? specialty : undefined
+          })
         });
 
         if (res.ok) {
@@ -439,7 +452,7 @@
 
           showToast('Conta criada com sucesso! Bem-vindo(a)!', 'success');
           setTimeout(function () {
-            window.location.href = 'paciente.html';
+            window.location.href = data.user.role === 'terapeuta' ? 'terapeuta.html' : 'paciente.html';
           }, 700);
         } else {
           var errorData = await res.json().catch(function () { return {}; });

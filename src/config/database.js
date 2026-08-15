@@ -111,6 +111,7 @@ async function initDatabase() {
   // --- Migrations for existing databases ---
   await safeAddColumn('users', 'must_change_credentials INTEGER NOT NULL DEFAULT 0');
   await safeAddColumn('users', 'is_active INTEGER NOT NULL DEFAULT 1');
+  await safeAddColumn('users', "specialty TEXT DEFAULT 'Psicologia'");
   await safeAddColumn('checkins', "notes TEXT DEFAULT ''");
 
   console.log('PostgreSQL tables initialized.');
