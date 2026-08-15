@@ -125,7 +125,7 @@ const getPatientHistory = async (req, res) => {
     const { id } = req.params;
 
     const patient = await get(
-      `SELECT id, name, email, created_at, is_active, specialty, whatsapp
+      `SELECT id, name, email, created_at, is_active, specialty, whatsapp, last_attended_at
        FROM users
        WHERE id = @id AND role = 'paciente'`,
       { id }
@@ -206,11 +206,24 @@ const getPatientHistory = async (req, res) => {
       created_at: normalizeDate(j.created_at)
     }));
 
+    // Compute attended status
+    let attendedToday = false;
+    let daysSinceAttended = null;
+    if (patient.last_attended_at) {
+      const attendedDate = new Date(normalizeDate(patient.last_attended_at));
+      const diffMs = new Date() - attendedDate;
+      daysSinceAttended = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      attendedToday = daysSinceAttended === 0;
+    }
+
     const overview = {
       ...patient,
       created_at: normalizeDate(patient.created_at),
       is_active: patient.is_active === undefined ? 1 : patient.is_active,
       avg_score: avgScore,
+      last_attended_at: patient.last_attended_at || null,
+      attended_today: attendedToday,
+      days_since_attended: daysSinceAttended,
       status
     };
 

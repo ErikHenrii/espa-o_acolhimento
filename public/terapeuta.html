@@ -186,10 +186,6 @@
                     <span id="overview-active-pill" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-800">
                       <span class="w-2 h-2 rounded-full bg-teal-500"></span> Ativo
                     </span>
-                    <button id="btn-mark-attended" onclick="markPatientAttended(selectedPatientId)" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all border cursor-pointer bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200">
-                      <i class="fa-solid fa-circle-check text-[10px]"></i>
-                      <span id="mark-attended-label">Marcar atendido</span>
-                    </button>
                     <button id="btn-toggle-patient-status" onclick="togglePatientStatus()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all border cursor-pointer">
                       <i class="fa-solid fa-power-off text-[10px]"></i>
                       <span id="toggle-status-label">Arquivar</span>
@@ -202,6 +198,13 @@
                     </button>
                   </div>
                   <p id="overview-since" class="text-[11px] text-teal-700 mt-1 font-medium">Cadastrado em --/--/----</p>
+                </div>
+                <!-- Mark Attended Button - Destacado -->
+                <div class="flex-shrink-0 mt-2 sm:mt-0">
+                  <button id="btn-mark-attended" onclick="markPatientAttended(selectedPatientId)" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-300 shadow-sm">
+                    <i class="fa-solid fa-circle-check text-sm"></i>
+                    <span id="mark-attended-label">Marcar atendido</span>
+                  </button>
                 </div>
               </div>
 

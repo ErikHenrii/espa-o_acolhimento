@@ -283,8 +283,15 @@ async function markPatientAttended(patientId, event) {
         patient.days_since_attended = 0;
       }
       
+      // Also update selectedPatientData overview
+      if (selectedPatientData.overview) {
+        selectedPatientData.overview.attended_today = true;
+        selectedPatientData.overview.last_attended_at = data.last_attended_at;
+      }
+      
       renderPatientList(document.getElementById('patient-search-input')?.value || '');
       renderMobilePatientSelect();
+      renderPatientOverview();
       
       showToast('Paciente marcado como atendido', 'success');
     } else if (res.status === 401) {
@@ -588,6 +595,28 @@ function renderPatientOverview() {
     } else {
       toggleBtn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all border border-teal-300 text-teal-700 bg-teal-50 hover:bg-teal-100 cursor-pointer';
       if (toggleLabel) toggleLabel.textContent = 'Reativar';
+    }
+  }
+
+  // Mark attended button
+  const attendedBtn = document.getElementById('btn-mark-attended');
+  const attendedLabel = document.getElementById('mark-attended-label');
+  if (attendedBtn) {
+    var isAttended = p.attended_today === true;
+    // Also check patientsList for the most up-to-date status
+    var pInList = patientsList.find(function(x) { return x.id === p.id; });
+    if (pInList && pInList.attended_today === true) isAttended = true;
+    
+    if (isAttended) {
+      attendedBtn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all border border-indigo-400 text-indigo-700 bg-indigo-100 cursor-default';
+      attendedBtn.disabled = true;
+      attendedBtn.style.opacity = '0.8';
+      if (attendedLabel) attendedLabel.textContent = 'Atendido hoje ✓';
+    } else {
+      attendedBtn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all border border-indigo-300 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-400 cursor-pointer shadow-sm';
+      attendedBtn.disabled = false;
+      attendedBtn.style.opacity = '1';
+      if (attendedLabel) attendedLabel.textContent = 'Marcar atendido';
     }
   }
 
