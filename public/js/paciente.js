@@ -794,5 +794,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderMoodGrid();
     fetchPatientData();
     initControls();
+    fetchTherapistInfo();
   }
 });

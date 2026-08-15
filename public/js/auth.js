@@ -146,13 +146,31 @@
       var confirmPass = document.getElementById('cred-confirm-password').value;
 
       // Validation
-      if (!currentPass) {
-        showToast('Informe sua senha atual.', 'error');
-        return;
+      // Allow update if any field is provided (email, password, specialty, or whatsapp)
+      var hasSpecialty = false;
+      var hasWhatsapp = false;
+      var specSel = document.getElementById('cred-new-specialty');
+      var specField = document.getElementById('cred-specialty-field');
+      var waInput = document.getElementById('cred-new-whatsapp');
+      if (specSel && specField && !specField.classList.contains('hidden') && specSel.value) {
+        hasSpecialty = true;
+      }
+      if (waInput && waInput.value.trim()) {
+        hasWhatsapp = true;
       }
 
-      if (!newEmail && !newPass) {
-        showToast('Informe um novo e-mail ou nova senha para atualizar.', 'error');
+      // Password is only required when changing email or password
+      if ((newEmail || newPass) && !currentPass) {
+        showToast('Informe sua senha atual para alterar e-mail ou senha.', 'error');
+        return;
+      }
+      var hasSpecialty = false;
+      var hasWhatsapp = false;
+      var specSel = document.getElementById('cred-new-specialty');
+      var specField = document.getElementById('cred-specialty-field');
+      var waInput = document.getElementById('cred-new-whatsapp');
+      if (!newEmail && !newPass && !hasSpecialty && !hasWhatsapp) {
+        showToast('Informe ao menos um campo para atualizar (e-mail, senha, área de atuação ou WhatsApp).', 'error');
         return;
       }
 
@@ -171,7 +189,7 @@
 
       // Build request body with optional specialty + whatsapp
       var bodyData = {
-        current_password: currentPass,
+        current_password: currentPass || undefined,
         new_email: newEmail || undefined,
         new_password: newPass || undefined
       };

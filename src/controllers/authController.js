@@ -210,10 +210,10 @@ const updateCredentials = async (req, res) => {
     new_email = new_email ? sanitizeString(new_email).toLowerCase() : null;
     new_password = typeof new_password === 'string' ? new_password.trim() : '';
 
-    if (!new_email && !new_password) {
+    if (!new_email && !new_password && new_specialty === undefined && new_whatsapp === undefined) {
       return res.status(400).json({
         error: 'Dados incompletos',
-        message: 'Informe o novo e-mail ou a nova senha para atualizar.'
+        message: 'Informe ao menos um campo para atualizar (e-mail, senha, área de atuação ou WhatsApp).'
       });
     }
 
@@ -229,12 +229,15 @@ const updateCredentials = async (req, res) => {
       });
     }
 
-    const isCurrentValid = await bcrypt.compare(current_password, user.password_hash);
-    if (!isCurrentValid) {
-      return res.status(401).json({
-        error: 'Senha atual incorreta',
-        message: 'A senha atual informada não confere.'
-      });
+    // Only verify current password if email or password is being changed
+    if (new_email || new_password) {
+      const isCurrentValid = await bcrypt.compare(current_password, user.password_hash);
+      if (!isCurrentValid) {
+        return res.status(401).json({
+          error: 'Senha atual incorreta',
+          message: 'A senha atual informada não confere.'
+        });
+      }
     }
 
     let updates = [];
