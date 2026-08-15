@@ -68,6 +68,19 @@ function authRateLimiter(req, res, next) {
 // ============================================================
 // Static files
 // ============================================================
+// Serve PWA manifest with correct content type
+app.get('/manifest.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/manifest+json');
+  res.sendFile(path.join(__dirname, '../public/manifest.json'));
+});
+
+// Serve service worker at root scope (required for PWA)
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, '../public/sw.js'));
+});
+
 const publicPath = path.join(__dirname, '../public');
 app.use(express.static(publicPath, {
   etag: false,
