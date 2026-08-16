@@ -655,38 +655,60 @@ function renderDashboard() {
   var noData = active.filter(function(p) { return p.avg_score === 0; }).length;
   var totalActive = active.length || 1;
 
+  // Build patient lists per category for expandable status breakdown
+  var stablePatients = active.filter(function(p) { return p.avg_score >= 7; });
+  var warningPatients = active.filter(function(p) { return p.avg_score >= 5 && p.avg_score < 7; });
+  var criticalPatients = active.filter(function(p) { return p.avg_score > 0 && p.avg_score < 5; });
+  var noDataPatients = active.filter(function(p) { return p.avg_score === 0; });
+
+  function patientListItem(p, textColor) {
+    var updateInfo = getUpdateStatusInfo(p);
+    var attendedTag = p.attended_today ? '<span class="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full">Atendido</span>' : '';
+    var newTag = p.has_new_data ? '<span class="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full">Novos dados</span>' : '';
+    var scoreLabel = p.avg_score > 0 ? p.avg_score.toFixed(1) + '/10' : '--';
+    return '<div onclick="selectPatient(\'' + escapeHtml(p.id) + '\')" class="flex items-center justify-between p-2 rounded-lg bg-white/70 border border-current/10 hover:bg-white cursor-pointer transition-all">'
+      + '<div class="flex items-center gap-2">'
+      + '<div class="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 font-bold text-[11px] flex items-center justify-center">' + escapeHtml(p.name.charAt(0)) + '</div>'
+      + '<div>'
+      + '<p class="text-xs font-semibold ' + textColor + '">' + escapeHtml(p.name) + '</p>'
+      + '<div class="flex items-center gap-1 mt-0.5">' + attendedTag + newTag + '</div>'
+      + '</div></div>'
+      + '<span class="text-xs font-bold ' + textColor + '">' + scoreLabel + '</span>'
+      + '</div>';
+  }
+
+  function statusRow(id, label, count, bgColor, borderColor, dotColor, textColor, patients) {
+    var hasPatients = patients.length > 0;
+    var chevron = hasPatients ? '<i class="fa-solid fa-chevron-down text-[10px] ' + textColor + ' transition-transform" id="chevron-' + id + '"></i>' : '';
+    var countBadge = '<span class="flex items-center gap-1.5"><span class="text-sm font-bold ' + textColor + '">' + count + '</span>' + chevron + '</span>';
+    var clickAttr = hasPatients ? 'onclick="toggleStatusList(\'' + id + '\')"' : '';
+    var cursorClass = hasPatients ? 'cursor-pointer hover:shadow-md' : 'cursor-default';
+    
+    var listHtml = '';
+    if (hasPatients) {
+      var items = patients.map(function(p) { return patientListItem(p, textColor); }).join('');
+      listHtml = '<div id="list-' + id + '" class="hidden mt-2 ml-2 mr-2 space-y-1.5 pb-1">' + items + '</div>';
+    }
+
+    return '<div class="rounded-xl ' + bgColor + ' border ' + borderColor + ' ' + cursorClass + ' transition-all" ' + clickAttr + '>'
+      + '<div class="flex items-center justify-between p-2.5">'
+      + '<div class="flex items-center gap-2">'
+      + '<span class="w-2.5 h-2.5 rounded-full ' + dotColor + '"></span>'
+      + '<span class="text-xs font-semibold ' + textColor + '">' + label + '</span>'
+      + '</div>'
+      + countBadge
+      + '</div>'
+      + listHtml
+      + '</div>';
+  }
+
   var statusBreakdown = document.getElementById('dash-status-breakdown');
   if (statusBreakdown) {
-    statusBreakdown.innerHTML = `
-      <div class="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
-        <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-          <span class="text-xs font-semibold text-emerald-800">Quadro Estável</span>
-        </div>
-        <span class="text-sm font-bold text-emerald-900">${stable}</span>
-      </div>
-      <div class="flex items-center justify-between p-2.5 rounded-xl bg-orange-50 border border-orange-200">
-        <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
-          <span class="text-xs font-semibold text-orange-800">Requer Atenção</span>
-        </div>
-        <span class="text-sm font-bold text-orange-900">${warning}</span>
-      </div>
-      <div class="flex items-center justify-between p-2.5 rounded-xl bg-rose-50 border border-rose-200">
-        <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-          <span class="text-xs font-semibold text-rose-800">Alerta Clínico</span>
-        </div>
-        <span class="text-sm font-bold text-rose-900">${critical}</span>
-      </div>
-      <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-        <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
-          <span class="text-xs font-semibold text-slate-600">Sem Dados</span>
-        </div>
-        <span class="text-sm font-bold text-slate-700">${noData}</span>
-      </div>
-    `;
+    statusBreakdown.innerHTML =
+      statusRow('stable', 'Quadro Estável', stable.length, 'bg-emerald-50', 'border-emerald-200', 'bg-emerald-500', 'text-emerald-800', stablePatients)
+      + statusRow('warning', 'Requer Atenção', warning.length, 'bg-orange-50', 'border-orange-200', 'bg-orange-500', 'text-orange-800', warningPatients)
+      + statusRow('critical', 'Alerta Clínico', critical.length, 'bg-rose-50', 'border-rose-200', 'bg-rose-500', 'text-rose-800', criticalPatients)
+      + statusRow('nodata', 'Sem Dados', noData.length, 'bg-slate-50', 'border-slate-200', 'bg-slate-400', 'text-slate-600', noDataPatients);
   }
 
   // Recent updates (patients sorted by last_activity, most recent first)
@@ -745,6 +767,23 @@ function backToDashboard() {
   if (selectMobile) selectMobile.value = '';
 }
 window.backToDashboard = backToDashboard;
+
+// Toggle expandable status list in dashboard
+function toggleStatusList(id) {
+  var list = document.getElementById('list-' + id);
+  var chevron = document.getElementById('chevron-' + id);
+  if (list) {
+    list.classList.toggle('hidden');
+  }
+  if (chevron) {
+    if (list && list.classList.contains('hidden')) {
+      chevron.style.transform = 'rotate(0deg)';
+    } else {
+      chevron.style.transform = 'rotate(180deg)';
+    }
+  }
+}
+window.toggleStatusList = toggleStatusList;
 
 function showEmptyState(show) {
   const emptyView = document.getElementById('empty-state-view');
