@@ -376,8 +376,8 @@ function renderPatientCard(p) {
   var hasNewData = p.has_new_data === true;
   var newBadge = '';
   if (hasNewData && isActive) {
-    newBadge = `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-rose-400/30 text-rose-200' : 'bg-rose-100 text-rose-600'} flex items-center gap-1 mt-0.5 w-fit">
-      <i class="fa-solid fa-circle-dot text-[8px]"></i> Novos dados
+    newBadge = `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-rose-400/30 text-rose-200' : 'bg-rose-500 text-white'} flex items-center gap-1 mt-0.5 w-fit shadow-sm">
+      <i class="fa-solid fa-bell text-[8px] animate-pulse"></i> Novos dados
     </span>`;
   }
 
@@ -400,7 +400,7 @@ function renderPatientCard(p) {
   var pulseClass = '';
   var cardBorderHighlight = '';
   if (hasNewData && !isSelected && isActive) {
-    pulseClass = 'animate-pulse-card ring-2 ring-rose-300 border-rose-300';
+    pulseClass = 'animate-pulse-card ring-2 ring-rose-400 border-rose-400';
   }
 
   return `
