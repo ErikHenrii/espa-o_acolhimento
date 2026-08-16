@@ -628,7 +628,8 @@ function renderDashboard() {
   var active = patientsList.filter(function(p) { return p.is_active !== 0; });
   var attendedToday = patientsList.filter(function(p) { return p.attended_today === true; });
   var needAttention = patientsList.filter(function(p) {
-    return p.avg_score > 0 && p.avg_score < 5 && p.is_active !== 0;
+    var s = (typeof p.avg_score === 'number' && !isNaN(p.avg_score)) ? p.avg_score : 0;
+    return s > 0 && s < 5 && p.is_active !== 0;
   });
   var newData = patientsList.filter(function(p) { return p.has_new_data === true && p.is_active !== 0; });
 
@@ -648,24 +649,26 @@ function renderDashboard() {
   var trendNew = document.getElementById('dash-trend-new');
   if (trendNew) trendNew.textContent = newData.length > 0 ? 'Não vistos' : 'Em dia';
 
-  // Status breakdown
-  var stable = active.filter(function(p) { return p.avg_score >= 7; }).length;
-  var warning = active.filter(function(p) { return p.avg_score >= 5 && p.avg_score < 7; }).length;
-  var critical = active.filter(function(p) { return p.avg_score > 0 && p.avg_score < 5; }).length;
-  var noData = active.filter(function(p) { return p.avg_score === 0; }).length;
+  // Status breakdown — treat null/undefined avg_score as 0
+  function getScore(p) { return (typeof p.avg_score === 'number' && !isNaN(p.avg_score)) ? p.avg_score : 0; }
+
+  var stable = active.filter(function(p) { return getScore(p) >= 7; }).length;
+  var warning = active.filter(function(p) { return getScore(p) >= 5 && getScore(p) < 7; }).length;
+  var critical = active.filter(function(p) { return getScore(p) > 0 && getScore(p) < 5; }).length;
+  var noData = active.filter(function(p) { return getScore(p) === 0; }).length;
   var totalActive = active.length || 1;
 
   // Build patient lists per category for expandable status breakdown
-  var stablePatients = active.filter(function(p) { return p.avg_score >= 7; });
-  var warningPatients = active.filter(function(p) { return p.avg_score >= 5 && p.avg_score < 7; });
-  var criticalPatients = active.filter(function(p) { return p.avg_score > 0 && p.avg_score < 5; });
-  var noDataPatients = active.filter(function(p) { return p.avg_score === 0; });
+  var stablePatients = active.filter(function(p) { return getScore(p) >= 7; });
+  var warningPatients = active.filter(function(p) { return getScore(p) >= 5 && getScore(p) < 7; });
+  var criticalPatients = active.filter(function(p) { return getScore(p) > 0 && getScore(p) < 5; });
+  var noDataPatients = active.filter(function(p) { return getScore(p) === 0; });
 
   function patientListItem(p, textColor) {
     var updateInfo = getUpdateStatusInfo(p);
     var attendedTag = p.attended_today ? '<span class="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full">Atendido</span>' : '';
     var newTag = p.has_new_data ? '<span class="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full">Novos dados</span>' : '';
-    var scoreLabel = p.avg_score > 0 ? p.avg_score.toFixed(1) + '/10' : '--';
+    var score = getScore(p); var scoreLabel = score > 0 ? score.toFixed(1) + '/10' : '--';
     return '<div onclick="selectPatient(\'' + escapeHtml(p.id) + '\')" class="flex items-center justify-between p-2 rounded-lg bg-white/70 border border-current/10 hover:bg-white cursor-pointer transition-all">'
       + '<div class="flex items-center gap-2">'
       + '<div class="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 font-bold text-[11px] flex items-center justify-center">' + escapeHtml(p.name.charAt(0)) + '</div>'
