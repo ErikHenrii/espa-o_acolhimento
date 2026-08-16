@@ -77,13 +77,9 @@ function checkAuth() {
 
     // Display therapist name and specialty in header
     var specLabel = document.getElementById('therapist-specialty-label');
-    var therapistNameEl = document.getElementById('therapist-name');
     if (specLabel) {
-      var specialty = currentUser.specialty || 'Psicologia';
+      var specialty = currentUser.specialty || 'Psicólogo(a)';
       specLabel.textContent = escapeHtml(currentUser.name) + ' • ' + escapeHtml(specialty);
-    }
-    if (therapistNameEl) {
-      therapistNameEl.textContent = currentUser.name || 'Terapeuta';
     }
   } catch (e) {
     window.location.href = 'acesso.html';

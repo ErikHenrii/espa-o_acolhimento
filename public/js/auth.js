@@ -275,13 +275,7 @@
             var uSpec = data.user.specialty || 'Psicólogo(a)';
             specLabel.textContent = uName + ' • ' + uSpec;
           }
-          var therapistNameEl = document.getElementById('therapist-name');
-          if (therapistNameEl) therapistNameEl.textContent = data.user.name || 'Terapeuta';
-
-          // Also update the terapeuta subtitle next to gear icon if present
-          var therapistRoleEl = specLabel ? specLabel.nextElementSibling : null;
-
-          // Update currentUser in checkAuth scope by reloading if on terapeuta page
+          // Update dashboard if on terapeuta page
           if (typeof renderDashboard === 'function') {
             try { renderDashboard(); } catch (e) {}
           }
