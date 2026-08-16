@@ -111,8 +111,10 @@ async function initDatabase() {
   // --- Migrations for existing databases ---
   await safeAddColumn('users', 'must_change_credentials INTEGER NOT NULL DEFAULT 0');
   await safeAddColumn('users', 'is_active INTEGER NOT NULL DEFAULT 1');
-  await safeAddColumn('users', "specialty TEXT DEFAULT 'Psicologia'");
+  await safeAddColumn('users', "specialty TEXT DEFAULT 'Psicólogo(a)'");
   await safeAddColumn('users', "whatsapp TEXT DEFAULT ''");
+  await safeAddColumn('users', 'google_id TEXT DEFAULT NULL');
+  await safeAddColumn('users', 'apple_id TEXT DEFAULT NULL');
   await safeAddColumn('users', "last_attended_at TEXT DEFAULT NULL");
   await safeAddColumn('users', "last_viewed_at TEXT DEFAULT NULL");
   await safeAddColumn('checkins', "notes TEXT DEFAULT ''");

@@ -13,7 +13,7 @@ async function seedTherapist() {
   const therapistEmail = process.env.THERAPIST_EMAIL || 'jaqueline@espacoacolhimento.com.br';
   const therapistName = process.env.THERAPIST_NAME || 'Jaqueline Camila';
   const therapistPassword = process.env.THERAPIST_PASSWORD || 'jac123456';
-  const therapistSpecialty = process.env.THERAPIST_SPECIALTY || 'Psicologia';
+  const therapistSpecialty = process.env.THERAPIST_SPECIALTY || 'Psicólogo(a)';
   const therapistWhatsapp = process.env.THERAPIST_WHATSAPP || '';
 
   const existing = await get(

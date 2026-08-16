@@ -272,7 +272,7 @@
           var specLabel = document.getElementById('therapist-specialty-label');
           if (specLabel) {
             var uName = data.user.name || '';
-            var uSpec = data.user.specialty || 'Psicologia';
+            var uSpec = data.user.specialty || 'Psicólogo(a)';
             specLabel.textContent = uName + ' • ' + uSpec;
           }
           var therapistNameEl = document.getElementById('therapist-name');
@@ -571,4 +571,5 @@
       }
     });
   }
+
 })();

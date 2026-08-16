@@ -69,7 +69,7 @@ const register = async (req, res) => {
 
     // Validate role
     const finalRole = (role === 'terapeuta') ? 'terapeuta' : 'paciente';
-    const finalSpecialty = sanitizeString(specialty || 'Psicologia');
+    const finalSpecialty = sanitizeString(specialty || 'Psicólogo(a)');
     const finalWhatsapp = sanitizeString(whatsapp || '');
 
     const saltRounds = 10;

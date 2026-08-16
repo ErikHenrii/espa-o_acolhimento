@@ -339,7 +339,7 @@ const getTherapistInfo = async (req, res) => {
 
     return res.status(200).json({
       name: therapist.name,
-      specialty: therapist.specialty || 'Psicologia',
+      specialty: therapist.specialty || 'Psicólogo(a)',
       whatsapp: therapist.whatsapp || ''
     });
   } catch (error) {
