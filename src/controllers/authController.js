@@ -204,13 +204,15 @@ const login = async (req, res) => {
 const updateCredentials = async (req, res) => {
   try {
     const userId = req.user.id;
-    let { current_password, new_email, new_password, new_specialty, new_whatsapp } = req.body;
+    let { current_password, new_email, new_password, new_specialty, new_whatsapp, new_name } = req.body;
 
     current_password = typeof current_password === 'string' ? current_password : '';
     new_email = new_email ? sanitizeString(new_email).toLowerCase() : null;
     new_password = typeof new_password === 'string' ? new_password.trim() : '';
 
-    if (!new_email && !new_password && new_specialty === undefined && new_whatsapp === undefined) {
+    new_name = new_name ? sanitizeString(new_name).trim() : null;
+
+    if (!new_email && !new_password && new_specialty === undefined && new_whatsapp === undefined && !new_name) {
       return res.status(400).json({
         error: 'Dados incompletos',
         message: 'Informe ao menos um campo para atualizar (e-mail, senha, área de atuação ou WhatsApp).'
@@ -282,6 +284,18 @@ const updateCredentials = async (req, res) => {
       params.newHash = newHash;
     }
 
+    // Update name if provided
+    if (new_name) {
+      if (new_name.length < 2) {
+        return res.status(400).json({
+          error: 'Nome inválido',
+          message: 'O nome deve ter pelo menos 2 caracteres.'
+        });
+      }
+      updates.push('name = @newName');
+      params.newName = new_name;
+    }
+
     // Update specialty if provided
     if (new_specialty !== undefined) {
       const spec = sanitizeString(new_specialty);
@@ -330,6 +344,8 @@ const updateCredentials = async (req, res) => {
         email: updatedUser.email,
         role: updatedUser.role,
         must_change_credentials: updatedUser.must_change_credentials === 1,
+        specialty: updatedUser.specialty || null,
+        whatsapp: updatedUser.whatsapp || null,
         created_at: updatedUser.created_at
       },
       token

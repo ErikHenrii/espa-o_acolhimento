@@ -119,6 +119,22 @@
       if (warn2) warn2.classList.add('hidden');
     }
 
+    // Pre-fill fields with current user data
+    var userJson = localStorage.getItem('espaco_user');
+    if (userJson) {
+      try {
+        var u = JSON.parse(userJson);
+        var nameInput = document.getElementById('cred-new-name');
+        var emailInput = document.getElementById('cred-new-email');
+        var waInput = document.getElementById('cred-new-whatsapp');
+        var specSelect = document.getElementById('cred-new-specialty');
+        if (nameInput && u.name) nameInput.value = u.name;
+        if (emailInput && u.email) emailInput.value = u.email;
+        if (waInput && u.whatsapp) waInput.value = u.whatsapp;
+        if (specSelect && u.specialty) specSelect.value = u.specialty;
+      } catch (e) {}
+    }
+
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
   }
@@ -164,12 +180,19 @@
         showToast('Informe sua senha atual para alterar e-mail ou senha.', 'error');
         return;
       }
+      var newName = document.getElementById('cred-new-name') ? document.getElementById('cred-new-name').value.trim() : '';
       var hasSpecialty = false;
       var hasWhatsapp = false;
       var specSel = document.getElementById('cred-new-specialty');
       var specField = document.getElementById('cred-specialty-field');
       var waInput = document.getElementById('cred-new-whatsapp');
-      if (!newEmail && !newPass && !hasSpecialty && !hasWhatsapp) {
+      if (specSel && specField && !specField.classList.contains('hidden') && specSel.value) {
+        hasSpecialty = true;
+      }
+      if (waInput && waInput.value.trim()) {
+        hasWhatsapp = true;
+      }
+      if (!newEmail && !newPass && !hasSpecialty && !hasWhatsapp && !newName) {
         showToast('Informe ao menos um campo para atualizar (e-mail, senha, área de atuação ou WhatsApp).', 'error');
         return;
       }
@@ -191,7 +214,8 @@
       var bodyData = {
         current_password: currentPass || undefined,
         new_email: newEmail || undefined,
-        new_password: newPass || undefined
+        new_password: newPass || undefined,
+        new_name: newName || undefined
       };
 
       // Add whatsapp if provided
@@ -239,16 +263,28 @@
           document.getElementById('cred-new-email').value = '';
           document.getElementById('cred-new-password').value = '';
           document.getElementById('cred-confirm-password').value = '';
+          var nameClear = document.getElementById('cred-new-name');
+          if (nameClear) nameClear.value = '';
           var waClear = document.getElementById('cred-new-whatsapp');
           if (waClear) waClear.value = '';
 
           // Refresh therapist header if on terapeuta page
           var specLabel = document.getElementById('therapist-specialty-label');
-          if (specLabel && data.user.specialty) {
-            specLabel.textContent = data.user.name + ' • ' + data.user.specialty;
+          if (specLabel) {
+            var uName = data.user.name || '';
+            var uSpec = data.user.specialty || 'Psicologia';
+            specLabel.textContent = uName + ' • ' + uSpec;
           }
           var therapistNameEl = document.getElementById('therapist-name');
-          if (therapistNameEl) therapistNameEl.textContent = data.user.name;
+          if (therapistNameEl) therapistNameEl.textContent = data.user.name || 'Terapeuta';
+
+          // Also update the terapeuta subtitle next to gear icon if present
+          var therapistRoleEl = specLabel ? specLabel.nextElementSibling : null;
+
+          // Update currentUser in checkAuth scope by reloading if on terapeuta page
+          if (typeof renderDashboard === 'function') {
+            try { renderDashboard(); } catch (e) {}
+          }
 
           // Redirect if pending
           if (pendingRedirect) {
