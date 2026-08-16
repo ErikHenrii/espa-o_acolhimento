@@ -2,7 +2,7 @@
 // Service Worker — Espaço de Acolhimento PWA
 // ============================================================
 
-const CACHE_NAME = "acolhimento-v3";
+const CACHE_NAME = "acolhimento-v4";
 const STATIC_ASSETS = [
   '/',
   '/acesso.html',

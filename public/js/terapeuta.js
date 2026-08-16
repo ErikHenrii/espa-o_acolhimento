@@ -650,48 +650,38 @@ function renderDashboard() {
   if (trendNew) trendNew.textContent = newData.length > 0 ? 'Não vistos' : 'Em dia';
 
   // Status breakdown — treat null/undefined avg_score as 0
-  function getScore(p) { return (typeof p.avg_score === 'number' && !isNaN(p.avg_score)) ? p.avg_score : 0; }
+  var stablePatients = active.filter(function(p) { var s = Number(p.avg_score) || 0; return s >= 7; });
+  var warningPatients = active.filter(function(p) { var s = Number(p.avg_score) || 0; return s >= 5 && s < 7; });
+  var criticalPatients = active.filter(function(p) { var s = Number(p.avg_score) || 0; return s > 0 && s < 5; });
+  var noDataPatients = active.filter(function(p) { var s = Number(p.avg_score) || 0; return s === 0; });
 
-  var stable = active.filter(function(p) { return getScore(p) >= 7; }).length;
-  var warning = active.filter(function(p) { return getScore(p) >= 5 && getScore(p) < 7; }).length;
-  var critical = active.filter(function(p) { return getScore(p) > 0 && getScore(p) < 5; }).length;
-  var noData = active.filter(function(p) { return getScore(p) === 0; }).length;
-  var totalActive = active.length || 1;
+  var stableCount = stablePatients.length;
+  var warningCount = warningPatients.length;
+  var criticalCount = criticalPatients.length;
+  var noDataCount = noDataPatients.length;
 
-  // Build patient lists per category for expandable status breakdown
-  var stablePatients = active.filter(function(p) { return getScore(p) >= 7; });
-  var warningPatients = active.filter(function(p) { return getScore(p) >= 5 && getScore(p) < 7; });
-  var criticalPatients = active.filter(function(p) { return getScore(p) > 0 && getScore(p) < 5; });
-  var noDataPatients = active.filter(function(p) { return getScore(p) === 0; });
-
-  function patientListItem(p, textColor) {
-    var updateInfo = getUpdateStatusInfo(p);
-    var attendedTag = p.attended_today ? '<span class="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full">Atendido</span>' : '';
-    var newTag = p.has_new_data ? '<span class="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full">Novos dados</span>' : '';
-    var score = getScore(p); var scoreLabel = score > 0 ? score.toFixed(1) + '/10' : '--';
-    return '<div onclick="selectPatient(\'' + escapeHtml(p.id) + '\')" class="flex items-center justify-between p-2 rounded-lg bg-white/70 border border-current/10 hover:bg-white cursor-pointer transition-all">'
-      + '<div class="flex items-center gap-2">'
-      + '<div class="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 font-bold text-[11px] flex items-center justify-center">' + escapeHtml(p.name.charAt(0)) + '</div>'
-      + '<div>'
-      + '<p class="text-xs font-semibold ' + textColor + '">' + escapeHtml(p.name) + '</p>'
-      + '<div class="flex items-center gap-1 mt-0.5">' + attendedTag + newTag + '</div>'
-      + '</div></div>'
-      + '<span class="text-xs font-bold ' + textColor + '">' + scoreLabel + '</span>'
-      + '</div>';
+  function buildPatientList(patients, textColor) {
+    return patients.map(function(p) {
+      var s = Number(p.avg_score) || 0;
+      var scoreLabel = s > 0 ? s.toFixed(1) + '/10' : '--';
+      var attendedTag = p.attended_today ? '<span class="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full">Atendido</span>' : '';
+      var newTag = p.has_new_data ? '<span class="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full">Novos dados</span>' : '';
+      return '<div onclick="selectPatient(\'' + escapeHtml(p.id) + '\')" class="flex items-center justify-between p-2 rounded-lg bg-white/70 hover:bg-white cursor-pointer transition-all">'
+        + '<div class="flex items-center gap-2">'
+        + '<div class="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 font-bold text-[11px] flex items-center justify-center">' + escapeHtml(p.name.charAt(0)) + '</div>'
+        + '<div><p class="text-xs font-semibold ' + textColor + '">' + escapeHtml(p.name) + '</p>'
+        + '<div class="flex items-center gap-1 mt-0.5">' + attendedTag + newTag + '</div></div></div>'
+        + '<span class="text-xs font-bold ' + textColor + '">' + scoreLabel + '</span>'
+        + '</div>';
+    }).join('');
   }
 
-  function statusRow(id, label, count, bgColor, borderColor, dotColor, textColor, patients) {
+  function buildStatusRow(id, label, count, bgColor, borderColor, dotColor, textColor, patients) {
     var hasPatients = patients.length > 0;
     var chevron = hasPatients ? '<i class="fa-solid fa-chevron-down text-[10px] ' + textColor + ' transition-transform" id="chevron-' + id + '"></i>' : '';
-    var countBadge = '<span class="flex items-center gap-1.5"><span class="text-sm font-bold ' + textColor + '">' + count + '</span>' + chevron + '</span>';
     var clickAttr = hasPatients ? 'onclick="toggleStatusList(\'' + id + '\')"' : '';
     var cursorClass = hasPatients ? 'cursor-pointer hover:shadow-md' : 'cursor-default';
-    
-    var listHtml = '';
-    if (hasPatients) {
-      var items = patients.map(function(p) { return patientListItem(p, textColor); }).join('');
-      listHtml = '<div id="list-' + id + '" class="hidden mt-2 ml-2 mr-2 space-y-1.5 pb-1">' + items + '</div>';
-    }
+    var listHtml = hasPatients ? '<div id="list-' + id + '" class="hidden mt-2 ml-2 mr-2 space-y-1.5 pb-1">' + buildPatientList(patients, textColor) + '</div>' : '';
 
     return '<div class="rounded-xl ' + bgColor + ' border ' + borderColor + ' ' + cursorClass + ' transition-all" ' + clickAttr + '>'
       + '<div class="flex items-center justify-between p-2.5">'
@@ -699,7 +689,7 @@ function renderDashboard() {
       + '<span class="w-2.5 h-2.5 rounded-full ' + dotColor + '"></span>'
       + '<span class="text-xs font-semibold ' + textColor + '">' + label + '</span>'
       + '</div>'
-      + countBadge
+      + '<span class="flex items-center gap-1.5"><span class="text-sm font-bold ' + textColor + '">' + count + '</span>' + chevron + '</span>'
       + '</div>'
       + listHtml
       + '</div>';
@@ -708,10 +698,10 @@ function renderDashboard() {
   var statusBreakdown = document.getElementById('dash-status-breakdown');
   if (statusBreakdown) {
     statusBreakdown.innerHTML =
-      statusRow('stable', 'Quadro Estável', stable.length, 'bg-emerald-50', 'border-emerald-200', 'bg-emerald-500', 'text-emerald-800', stablePatients)
-      + statusRow('warning', 'Requer Atenção', warning.length, 'bg-orange-50', 'border-orange-200', 'bg-orange-500', 'text-orange-800', warningPatients)
-      + statusRow('critical', 'Alerta Clínico', critical.length, 'bg-rose-50', 'border-rose-200', 'bg-rose-500', 'text-rose-800', criticalPatients)
-      + statusRow('nodata', 'Sem Dados', noData.length, 'bg-slate-50', 'border-slate-200', 'bg-slate-400', 'text-slate-600', noDataPatients);
+      buildStatusRow('stable', 'Quadro Estável', String(stableCount), 'bg-emerald-50', 'border-emerald-200', 'bg-emerald-500', 'text-emerald-800', stablePatients)
+      + buildStatusRow('warning', 'Requer Atenção', String(warningCount), 'bg-orange-50', 'border-orange-200', 'bg-orange-500', 'text-orange-800', warningPatients)
+      + buildStatusRow('critical', 'Alerta Clínico', String(criticalCount), 'bg-rose-50', 'border-rose-200', 'bg-rose-500', 'text-rose-800', criticalPatients)
+      + buildStatusRow('nodata', 'Sem Dados', String(noDataCount), 'bg-slate-50', 'border-slate-200', 'bg-slate-400', 'text-slate-600', noDataPatients);
   }
 
   // Recent updates (patients sorted by last_activity, most recent first)
